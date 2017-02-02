@@ -1,1 +1,2 @@
-# palapa-api
+# gs-api
+BIG Palapa
