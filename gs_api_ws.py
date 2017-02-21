@@ -1088,58 +1088,34 @@ def edit_user():
     try:
         print "HEAD"
         try:
-            con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+            con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()  
             sqlm = "UPDATE group_members SET groupname='%s' WHERE username='%s';" % (str(grup), str(name))
-            print "UPDATE Group_Members", sqlm
             cur.execute(sqlm)
-            # selected_grup = Group_Members.query.filter_by(username=name).first
-            # selected_grup.groupname = grup
             sqln = "UPDATE user_roles SET rolename='%s' WHERE username='%s';" % (str(grup), str(name))
-            print "UPDATE User_Roles", sqln
-            cur.execute(sqln)            
-            # selected_role = User_Roles.query.filter_by(username=name).first
-            # selected_role = grup
-            print "A"
+            cur.execute(sqln)        
             con.close()
         except:
-            con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+            con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()  
             sqlm = "INSERT INTO group_members (groupname, username) VALUES ('%s', '%s');" % (str(grup), str(name))
-            print "INSERT Group_Members", sqlm
             cur.execute(sqlm)
-            # selected_grup = Group_Members.query.filter_by(username=name).first
-            # selected_grup.groupname = grup
             sqln = "INSERT INTO user_roles (rolename, username) VALUES ('%s', '%s');" % (str(grup), str(name))
-            print "INSERT User_Roles", sqln
-            cur.execute(sqln)            
-            # selected_role = User_Roles.query.filter_by(username=name).first
-            # selected_role = grup
-            print "B"
+            cur.execute(sqln)        
             con.close()
-            # selected_grup = Group_Members(groupname=grup)
-            # selected_grup.groupname = grup
-            # selected_grup.username = name
-            # db.session.add(selected_grup)
-            # selected_role = User_Roles(rolename=grup)
-            # selected_role.rolename = grup
-            # selected_role.username = name  
-            # db.session.add(selected_role)          
-            # print "B"
-            # db.session.commit()  
         try:
             if password != '':
                 p_password = 'plain:' + password 
-            con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+            con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()  
             sqlm = "UPDATE users SET password='%s' WHERE name='%s';" % (str(p_password), str(name))
-            print "UPDATE password", sqlm
-            cur.execute(sqlm)            
+            cur.execute(sqlm)              
+            sqln = "ALTER USER \"%s\" WITH PASSWORD '%s';" % (str(name), str(p_password))
+            cur.execute(sqln)        
             con.close()
-            print "C"
             resp = json.dumps({'RTN': True, 'MSG': 'Sukses!'})
         except:
             resp = json.dumps({'RTN': False, 'MSG': 'Error!'})
@@ -1204,11 +1180,6 @@ def new_groups():
     catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
     new_workspace = catalog.create_workspace(name,name)
     # Create database
-    # sqlalchemy_utils.create_database(app.config['SQLALCHEMY_DATASTORE'] + name, encoding='utf8', template='template_postgis_wraster')
-    # engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-    #engine.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    #sql ="CREATE DATABASE %s ENCODING 'UTF-8' TEMPLATE template_postgis_wraster owner %s;" % (str(name), str(app.config['DATASTORE_USER']))
-    #create_db = engine.execute(sql)
     con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
@@ -1222,9 +1193,7 @@ def new_groups():
     sql_kugi ="CREATE DATABASE \"%s\" ENCODING 'UTF-8' TEMPLATE template_palapa OWNER \"%s\";" % (str(name) + '_DEV', str(app.config['DATASTORE_USER']))
     cur.execute(sql_kugi)
     sql_grant_kugi = "GRANT ALL PRIVILEGES ON DATABASE \"%s\" TO \"%s\";"  % (str(name) + '_DEV','ROLE_'+str(name))
-    cur.execute(sql_grant_kugi)    
-    # sql_grant_kugiprod = "GRANT SELECT ON ALL TABLES IN SCHEMA public TO xxx; \"%s\" TO \"%s\";"  % ('palapa_prod'','ROLE_'+str(name))
-    # cur.execute(sql_grant_kugiprod)       
+    cur.execute(sql_grant_kugi)          
     con.close()
     # Create Store
     new_store = catalog.create_datastore(name,name)
@@ -1335,25 +1304,39 @@ def list_role():
 def delete_groups():
     if request.method == 'POST':
         header = json.loads(urllib2.unquote(request.data).split('=')[1])
-    print header['pubdata'] 
     name = header['pubdata']['name'] 
     if name is None:
         abort(400)
     if Group.query.filter_by(name=name).first() is None:
         abort(400)
     group = Group(name=name)
-    copyfile(app.config['GEOSERVER_LAYERS_PROP'], app.config['GEOSERVER_LAYERS_PROP'] + '.bak')
-    with open(app.config['GEOSERVER_LAYERS_PROP'] + '.bak') as oldfile, open(app.config['GEOSERVER_LAYERS_PROP'], 'w') as newfile:
+    copyfile(cfg.GEOSERVER_LAYERS_PROP, cfg.GEOSERVER_LAYERS_PROP + '.bak')
+    with open(cfg.GEOSERVER_LAYERS_PROP + '.bak') as oldfile, open(cfg.GEOSERVER_LAYERS_PROP, 'w') as newfile:
         for line in oldfile:
             if not name in line:
                 newfile.write(line)
     Group.query.filter_by(name=name).delete()
-    Roles.query.filter_by(name=name).delete()
-    User_Roles.query.filter_by(rolename=name).delete()
-    Group_Members.query.filter_by(groupname=name).delete()
-    db.session.commit()
-    shutil.rmtree(app.config['GEOSERVER_DATA_DIR'] + '/workspaces/' + name)
-    return jsonify({'deleted': group.name})           
+    if Group_Members.query.filter_by(groupname=name):
+        Group_Members.query.filter_by(groupname=name).delete()    
+    if Roles.query.filter_by(name=name):
+        Roles.query.filter_by(name=name).delete()    
+    if User_Roles.query.filter_by(rolename=name):
+        User_Roles.query.filter_by(rolename=name).delete()
+    db.session.commit()    
+    con = psycopg2.connect(dbname=cfg.DATASTORE_DB, user=cfg.DATASTORE_USER, host=cfg.DATASTORE_HOST, password=cfg.DATASTORE_PASS)
+    con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cur = con.cursor()  
+    sql_deldb1 = "ALTER DATABASE \"%s\" CONNECTION LIMIT 1;" % str(name)
+    cur.execute(sql_deldb1)    
+    sql_deldb2 = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s';" % str(name)
+    cur.execute(sql_deldb2)    
+    sql_deldb3 = "DROP DATABASE \"%s\";" % str(name)
+    cur.execute(sql_deldb3)    
+    sql_deldb4 = "DROP ROLE IF EXISTS \"%s\";" % str("ROLE_" + name)
+    cur.execute(sql_deldb4)        
+    con.close()
+    shutil.rmtree(cfg.GEOSERVER_DATA_DIR + 'workspaces/' + name)
+    return jsonify({'deleted': group.name})       
 
 @app.route('/api/group/<string:name>')
 def get_group(name):
@@ -1557,30 +1540,33 @@ def add_layer():
 def modify_layer():
     if request.method == 'POST':
         header = json.loads(urllib2.unquote(request.data).split('=')[1])
-        print header['pubdata']
         try:
-            catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
+            catalog = Catalog(cfg.GEOSERVER_REST_URL, cfg.GEOSERVER_USER, cfg.GEOSERVER_PASS)
             resource = catalog.get_resource(header['pubdata']['id'])
             resource.title = urllib2.unquote(header['pubdata']['title'])
             resource.abstract = urllib2.unquote(header['pubdata']['abstract'])
             resource.enabled = header['pubdata']['aktif']
+            try:
+                if header['pubdata']['style']['value']:
+                    set_style = header['pubdata']['style']['value']
+            except:
+                set_style = header['pubdata']['style']
             catalog.save(resource)
             catalog.reload()
             if header['pubdata']['tipe'] == 'VECTOR':
                 layer = catalog.get_layer(header['pubdata']['nativename'])
-                layer._set_default_style(header['pubdata']['style'])
+                layer._set_default_style(set_style)
                 msg = 'Set vector style'
-                print header['pubdata']['nativename'], header['pubdata']['style']
             if header['pubdata']['tipe'] == 'RASTER':
                 layer = catalog.get_layer(header['pubdata']['id'])
-                layer._set_default_style(header['pubdata']['style'])
+                layer._set_default_style(set_style)
                 msg ='Set raster style'
             catalog.save(layer)
             catalog.reload()
-            resp = json.dumps({'RTN': True, 'MSG': 'Informasi layer berhasil diedit'})
+            resp = json.dumps({'RTN': True, 'MSG': 'Success'})
         except:
-            resp = json.dumps({'RTN': False, 'MSG': 'Informasi layer gagal diedit'})    
-        return Response(resp, mimetype='application/json')        
+            resp = json.dumps({'RTN': False, 'MSG': 'Error'})    
+        return Response(resp, mimetype='application/json')      
 
 @app.route('/api/layers/delete', methods=['POST'])
 # @auth.login_required
