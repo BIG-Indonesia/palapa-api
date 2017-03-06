@@ -538,7 +538,7 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         bboxwgs84 = wb+','+sb+','+eb+','+nb
         print bboxwgs84
         wmslink = app.config['GEOSERVER_WMS_URL'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"
-        wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi
+        wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&outputFormat=shape-zip"
         print wmslink
         print wfslink
         mcf_template = mcf_template.replace('$$rep:fileIdentifier$$', fi)
@@ -3203,25 +3203,33 @@ def setfrontendtheme():
     template_index = template_index.replace('$$rep:email$$',info['email'])
     template_index = template_index.replace('$$rep:voice$$',info['phone'])
     template_index = template_index.replace('$$rep:fax$$',info['fax'])
-    berkas_index_write = open(app.config['PALAPA_FOLDER'] + 'index.html', 'r+b')
+    if os.path.isfile(app.config['PALAPA_FOLDER'] + 'index.html'):
+        os.remove(app.config['PALAPA_FOLDER'] + 'index.html')
+    berkas_index_write = open(app.config['PALAPA_FOLDER'] + 'index.html', 'a')
     berkas_index_write.write(template_index)
     berkas_index_write.close()
     template_jelajah = template_jelajah.replace('$$rep:captitledepan$$',cap_depan)
     template_jelajah = template_jelajah.replace('$$rep:titledepan$$',cap_belakang)
     template_jelajah = template_jelajah.replace('$$rep:logositus$$',logo_path)	
-    berkas_jelajah_write = open(app.config['PALAPA_FOLDER'] + 'jelajah.html', 'r+b')
+    if os.path.isfile(app.config['PALAPA_FOLDER'] + 'jelajah.html'):
+        os.remove(app.config['PALAPA_FOLDER'] + 'jelajah.html')
+    berkas_jelajah_write = open(app.config['PALAPA_FOLDER'] + 'jelajah.html', 'a')
     berkas_jelajah_write.write(template_jelajah)
     berkas_jelajah_write.close()
     template_cari = template_cari.replace('$$rep:captitledepan$$',cap_depan)
     template_cari = template_cari.replace('$$rep:titledepan$$',cap_belakang)
-    template_cari = template_cari.replace('$$rep:logositus$$',logo_path)	
-    berkas_cari_write = open(app.config['PALAPA_FOLDER'] + 'cari.html', 'r+b')
+    template_cari = template_cari.replace('$$rep:logositus$$',logo_path)		
+    if os.path.isfile(app.config['PALAPA_FOLDER'] + 'cari.html'):
+        os.remove(app.config['PALAPA_FOLDER'] + 'cari.html')
+    berkas_cari_write = open(app.config['PALAPA_FOLDER'] + 'cari.html', 'a')
     berkas_cari_write.write(template_cari)
     berkas_cari_write.close()
     template_cfgol = template_cfgol.replace('$$rep:c_x$$', str(c_x))
     template_cfgol = template_cfgol.replace('$$rep:c_y$$', str(c_y))
-    template_cfgol = template_cfgol.replace('$$rep:c_zoom$$', str(c_zoom))
-    berkas_cfgol_write = open(app.config['PALAPA_FOLDER'] + 'js/cfg.js', 'r+b')
+    template_cfgol = template_cfgol.replace('$$rep:c_zoom$$', str(c_zoom))		
+    if os.path.isfile(app.config['PALAPA_FOLDER'] + 'js/cfg.js'):
+        os.remove(app.config['PALAPA_FOLDER'] + 'js/cfg.js')
+    berkas_cfgol_write = open(app.config['PALAPA_FOLDER'] + 'js/cfg.js', 'a')
     berkas_cfgol_write.write(template_cfgol)
     berkas_cfgol_write.close()
     msg = json.dumps({'Result': True, 'MSG':'Data sukses disimpan!'})
