@@ -1,0 +1,13 @@
+[Unit]
+Description = uWSGI to GSPalapa-API
+After = network.target
+
+[Service]
+User = root
+Group = root
+WorkingDirectory = /opt/gspalapa-api
+ExecStart = /usr/sbin/uwsgi --plugin python --thunder-lock --enable-threads --socket 0.0.0.0:8000 --protocol=http  --ini gs-api.ini
+
+[Install]
+WantedBy = multi-user.target
+
