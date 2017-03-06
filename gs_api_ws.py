@@ -8,8 +8,7 @@
 # tejo
 # August 2016
 
-import os, sys
-import sys, os
+import sys, os, shutil
 # abspath = os.path.dirname(__file__)
 # sys.path.append(abspath)
 # os.chdir(abspath)
@@ -393,7 +392,7 @@ def delete_spatial_records(skema,fitur,identifier,database):
     return msg
 
 def delete_metakugi(fitur):
-    con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+    con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
     sql = "DELETE from metakugi WHERE identifier='%s';" % (str(fitur))    
@@ -404,7 +403,7 @@ def delete_metakugi(fitur):
     return msg
 
 def delete_metakugi_db(db, fitur):
-    con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+    con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
     sql = "DELETE from metakugi_%s WHERE identifier='%s';" % (str(db), str(fitur))    
@@ -415,7 +414,7 @@ def delete_metakugi_db(db, fitur):
     return msg    
 
 def delete_metalinks(fitur):
-    con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+    con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
     sql = "DELETE from metalinks WHERE identifier='%s';" % (str(fitur))    
@@ -573,7 +572,7 @@ def pycswdel(layer_id, layer_workspace):
     identifier = layer_id
     workspace = layer_workspace
     try:
-        con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+        con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         if workspace == 'KUGI':
@@ -1092,19 +1091,43 @@ def edit_user():
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()  
             sqlm = "UPDATE group_members SET groupname='%s' WHERE username='%s';" % (str(grup), str(name))
+            print "UPDATE Group_Members", sqlm
             cur.execute(sqlm)
+            # selected_grup = Group_Members.query.filter_by(username=name).first
+            # selected_grup.groupname = grup
             sqln = "UPDATE user_roles SET rolename='%s' WHERE username='%s';" % (str(grup), str(name))
-            cur.execute(sqln)        
+            print "UPDATE User_Roles", sqln
+            cur.execute(sqln)            
+            # selected_role = User_Roles.query.filter_by(username=name).first
+            # selected_role = grup
+            print "A"
             con.close()
         except:
             con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()  
             sqlm = "INSERT INTO group_members (groupname, username) VALUES ('%s', '%s');" % (str(grup), str(name))
+            print "INSERT Group_Members", sqlm
             cur.execute(sqlm)
+            # selected_grup = Group_Members.query.filter_by(username=name).first
+            # selected_grup.groupname = grup
             sqln = "INSERT INTO user_roles (rolename, username) VALUES ('%s', '%s');" % (str(grup), str(name))
-            cur.execute(sqln)        
+            print "INSERT User_Roles", sqln
+            cur.execute(sqln)            
+            # selected_role = User_Roles.query.filter_by(username=name).first
+            # selected_role = grup
+            print "B"
             con.close()
+            # selected_grup = Group_Members(groupname=grup)
+            # selected_grup.groupname = grup
+            # selected_grup.username = name
+            # db.session.add(selected_grup)
+            # selected_role = User_Roles(rolename=grup)
+            # selected_role.rolename = grup
+            # selected_role.username = name  
+            # db.session.add(selected_role)          
+            # print "B"
+            # db.session.commit()  
         try:
             if password != '':
                 p_password = 'plain:' + password 
@@ -1112,10 +1135,12 @@ def edit_user():
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()  
             sqlm = "UPDATE users SET password='%s' WHERE name='%s';" % (str(p_password), str(name))
-            cur.execute(sqlm)              
+            print "UPDATE password", sqlm
+            cur.execute(sqlm)  
             sqln = "ALTER USER \"%s\" WITH PASSWORD '%s';" % (str(name), str(p_password))
-            cur.execute(sqln)        
+            cur.execute(sqln)                           
             con.close()
+            print "C"
             resp = json.dumps({'RTN': True, 'MSG': 'Sukses!'})
         except:
             resp = json.dumps({'RTN': False, 'MSG': 'Error!'})
@@ -1169,33 +1194,33 @@ def new_groups():
     if Roles.query.filter_by(name=name).first() is not None:
         resp = json.dumps({'RTN': 'ERR', 'MSG': 'Error, Role sudah ada!'})
         return Response(resp, mimetype='application/json')
-        abort(400)    
-    group = Group(name=name,organization=organization,url=url,phone=phone,fax=fax,address=address,city=city,administrativearea=administrativearea,postalcode=postalcode,email=email,country=country,kodesimpul=kodesimpul)
-    role = Roles(name=name)
-    group.enabled =  header['pubdata']['enabled'] 
-    db.session.add(group)
-    db.session.add(role)
-    db.session.commit()
-    print 'Commited'
-    catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
-    new_workspace = catalog.create_workspace(name,name)
-    # Create database
+        abort(400)   
     con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
-    sql ="CREATE DATABASE \"%s\" ENCODING 'UTF-8' TEMPLATE template_postgis_wraster OWNER \"%s\";" % (str(name), str(app.config['DATASTORE_USER']))
-    cur.execute(sql)
     sql_role = "CREATE ROLE \"%s\";" % ('ROLE_'+str(name))
     cur.execute(sql_role)
+    sql ="CREATE DATABASE \"%s\" ENCODING 'UTF-8' TEMPLATE template_postgis_wraster OWNER \"%s\";" % (str(name), str(app.config['DATASTORE_USER']))
+    cur.execute(sql)
     sql_grant = "GRANT ALL PRIVILEGES ON DATABASE \"%s\" TO \"%s\";"  % (str(name),'ROLE_'+str(name))
     cur.execute(sql_grant)
     # KUGI TEMPLATES
     sql_kugi ="CREATE DATABASE \"%s\" ENCODING 'UTF-8' TEMPLATE template_palapa OWNER \"%s\";" % (str(name) + '_DEV', str(app.config['DATASTORE_USER']))
     cur.execute(sql_kugi)
     sql_grant_kugi = "GRANT ALL PRIVILEGES ON DATABASE \"%s\" TO \"%s\";"  % (str(name) + '_DEV','ROLE_'+str(name))
-    cur.execute(sql_grant_kugi)          
+    cur.execute(sql_grant_kugi)    
+    # sql_grant_kugiprod = "GRANT SELECT ON ALL TABLES IN SCHEMA public TO xxx; \"%s\" TO \"%s\";"  % ('palapa_prod'','ROLE_'+str(name))
+    # cur.execute(sql_grant_kugiprod)       
     con.close()
+    group = Group(name=name,organization=organization,url=url,phone=phone,fax=fax,address=address,city=city,administrativearea=administrativearea,postalcode=postalcode,email=email,country=country,kodesimpul=kodesimpul)
+    role = Roles(name=name)
+    group.enabled =  header['pubdata']['enabled'] 
+    db.session.add(group)
+    db.session.add(role)
+    db.session.commit()
     # Create Store
+    catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
+    new_workspace = catalog.create_workspace(name,name)
     new_store = catalog.create_datastore(name,name)
     new_store.connection_parameters.update(host=app.config['DATASTORE_HOST'], port=app.config['DATASTORE_PORT'], database=name,user=app.config['DATASTORE_USER'], passwd=app.config['DATASTORE_PASS'], dbtype='postgis', schema='public')
     # layers security
@@ -1237,7 +1262,7 @@ def groupedit():
     selected_group.country = country
     selected_group.kodesimpul = kodesimpul
     db.session.commit()
-    return jsonify({'edited': name})
+    return jsonify({'MSG': 'Grup %s diperbaharui.' % name})   
 
 @app.route('/api/preparekugi', methods=['POST'])
 # @auth.login_required
@@ -1304,14 +1329,15 @@ def list_role():
 def delete_groups():
     if request.method == 'POST':
         header = json.loads(urllib2.unquote(request.data).split('=')[1])
+    print header['pubdata'] 
     name = header['pubdata']['name'] 
     if name is None:
         abort(400)
     if Group.query.filter_by(name=name).first() is None:
         abort(400)
     group = Group(name=name)
-    copyfile(cfg.GEOSERVER_LAYERS_PROP, cfg.GEOSERVER_LAYERS_PROP + '.bak')
-    with open(cfg.GEOSERVER_LAYERS_PROP + '.bak') as oldfile, open(cfg.GEOSERVER_LAYERS_PROP, 'w') as newfile:
+    copyfile(app.config['GEOSERVER_LAYERS_PROP'], app.config['GEOSERVER_LAYERS_PROP'] + '.bak')
+    with open(app.config['GEOSERVER_LAYERS_PROP'] + '.bak') as oldfile, open(app.config['GEOSERVER_LAYERS_PROP'], 'w') as newfile:
         for line in oldfile:
             if not name in line:
                 newfile.write(line)
@@ -1332,11 +1358,26 @@ def delete_groups():
     cur.execute(sql_deldb2)    
     sql_deldb3 = "DROP DATABASE \"%s\";" % str(name)
     cur.execute(sql_deldb3)    
+    sql_deldb5 = "DROP DATABASE \"%s\";" % str(name + '_DEV')
+    cur.execute(sql_deldb5)     
     sql_deldb4 = "DROP ROLE IF EXISTS \"%s\";" % str("ROLE_" + name)
     cur.execute(sql_deldb4)        
     con.close()
+    catalog = Catalog(cfg.GEOSERVER_REST_URL, cfg.GEOSERVER_USER, cfg.GEOSERVER_PASS)
     shutil.rmtree(cfg.GEOSERVER_DATA_DIR + 'workspaces/' + name)
-    return jsonify({'deleted': group.name})       
+    try:
+        store = catalog.get_store(name)
+        catalog.delete(store)
+        catalog.reload()
+    except:
+        pass
+    try:
+        ns = catalog.get_workspace(name)
+        catalog.delete(ns)
+        catalog.reload()    
+    except:
+        pass
+    return jsonify({'MSG': 'Grup %s dihapus.' % group.name})            
 
 @app.route('/api/group/<string:name>')
 def get_group(name):
@@ -1540,8 +1581,9 @@ def add_layer():
 def modify_layer():
     if request.method == 'POST':
         header = json.loads(urllib2.unquote(request.data).split('=')[1])
+        print header['pubdata']
         try:
-            catalog = Catalog(cfg.GEOSERVER_REST_URL, cfg.GEOSERVER_USER, cfg.GEOSERVER_PASS)
+            catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
             resource = catalog.get_resource(header['pubdata']['id'])
             resource.title = urllib2.unquote(header['pubdata']['title'])
             resource.abstract = urllib2.unquote(header['pubdata']['abstract'])
@@ -1563,10 +1605,10 @@ def modify_layer():
                 msg ='Set raster style'
             catalog.save(layer)
             catalog.reload()
-            resp = json.dumps({'RTN': True, 'MSG': 'Success'})
+            resp = json.dumps({'RTN': True, 'MSG': 'Informasi layer berhasil diedit'})
         except:
-            resp = json.dumps({'RTN': False, 'MSG': 'Error'})    
-        return Response(resp, mimetype='application/json')      
+            resp = json.dumps({'RTN': False, 'MSG': 'Informasi layer gagal diedit'})    
+        return Response(resp, mimetype='application/json')        
 
 @app.route('/api/layers/delete', methods=['POST'])
 # @auth.login_required
@@ -2111,7 +2153,7 @@ def pycswRecordDelete():
         identifier = header['pubdata']['identifier']
         workspace = header['pubdata']['workspace']
         try:
-            con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+            con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()
             if workspace == 'KUGI':
@@ -2358,6 +2400,21 @@ def kodesimpul():
     except:
         resp = json.dumps({'MSG': 'ERROR'})
     return Response(resp, mimetype='application/json')      
+
+@app.route('/api/kodesimpulext')
+def kodesimpulext():
+    output = []
+    engine = create_engine(app.config['SQLALCHEMY_BINDS']['services'])
+    result = engine.execute("select region_cod, region_nam, \"4326_minx\", \"4326_minx\", \"4326_maxx\", \"4326_maxy\", c_4326_x, c_4326_y from kode_simpul group by region_cod, region_nam, \"4326_minx\", \"4326_minx\", \"4326_maxx\", \"4326_maxy\", c_4326_x, c_4326_y")
+    try:
+        for row in result:
+            isi = {}
+            isi = row[0].strip() + ', ' + row[1].strip() + ', ' + str(row[6]) + ', ' + str(row[7])
+            output.append(isi)
+        resp = json.dumps(output)
+    except:
+        resp = json.dumps({'MSG': 'ERROR'})
+    return Response(resp, mimetype='application/json')          
 
 @app.route('/api/kodeepsg', methods=['GET'])
 def kodeepsg():
@@ -2929,7 +2986,7 @@ def truncate_front_layers():
         header = json.loads(urllib2.unquote(request.data).split('=')[1])   
         print "Header:", header['pubdata']
         try:
-            con = psycopg2.connect(dbname='palapa', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+            con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()
             sql = "TRUNCATE table front_layers;"   
@@ -3042,177 +3099,195 @@ def frontendtheme():
 @app.route('/api/setfrontendtheme', methods=['POST'])
 def setfrontendtheme():
     if request.method == 'POST':
-    	header = json.loads(urllib2.unquote(request.data).split('=')[1])
-	print header
-	judul_situs = urllib2.unquote(header['pubdata']['judul_situs'])
-	logo_situs = urllib2.unquote(header['pubdata']['logo_situs'])
-	berkas_gambar_1 = urllib2.unquote(header['pubdata']['berkas_gambar_1'])
-	berkas_gambar_2 = urllib2.unquote(header['pubdata']['berkas_gambar_2'])
-	keterangan_gambar_1 = urllib2.unquote(header['pubdata']['keterangan_gambar_1'])
-	keterangan_gambar_2 = urllib2.unquote(header['pubdata']['keterangan_gambar_2'])
-	judul_headline = urllib2.unquote(header['pubdata']['judul_headline'])
-	keterangan_headline = urllib2.unquote(header['pubdata']['keterangan_headline'])
-	judul_fitur = urllib2.unquote(header['pubdata']['judul_fitur'])
-	keterangan_fitur = urllib2.unquote(header['pubdata']['keterangan_fitur'])
-	tipe_tema = urllib2.unquote(header['pubdata']['tipe_tema'])
-	r_judul_situs = FrontendTheme.query.filter_by(key='judul_situs').first()
-	r_logo_situs = FrontendTheme.query.filter_by(key='logo_situs').first()
-	r_berkas_gambar_1 = FrontendTheme.query.filter_by(key='berkas_gambar_1').first()
-	r_berkas_gambar_2 = FrontendTheme.query.filter_by(key='berkas_gambar_2').first()
-	r_keterangan_gambar_1 = FrontendTheme.query.filter_by(key='keterangan_gambar_1').first()
-	r_keterangan_gambar_2 = FrontendTheme.query.filter_by(key='keterangan_gambar_2').first()
-	r_judul_headline = FrontendTheme.query.filter_by(key='judul_headline').first()
-	r_keterangan_headline = FrontendTheme.query.filter_by(key='keterangan_headline').first()
-	r_judul_fitur = FrontendTheme.query.filter_by(key='judul_fitur').first()
-	r_keterangan_fitur = FrontendTheme.query.filter_by(key='keterangan_fitur').first()
-	r_tipe_tema = FrontendTheme.query.filter_by(key='tipe_tema').first()
-	r_judul_situs.value = judul_situs
-	r_logo_situs.value = logo_situs
-	r_berkas_gambar_1.value = berkas_gambar_1
-	r_berkas_gambar_2.value = berkas_gambar_2
-	r_keterangan_gambar_1.value = keterangan_gambar_1
-	r_keterangan_gambar_2.value = keterangan_gambar_2
-	r_judul_headline.value = judul_headline
-	r_keterangan_headline.value = keterangan_headline
-	r_judul_fitur.value = judul_fitur
-	r_keterangan_fitur.value = keterangan_fitur
-	r_tipe_tema.value = tipe_tema
-	db.session.commit()	
-	if tipe_tema == '1':
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/index.html') as berkas_index:
-	        template_index = berkas_index.read()
-	    berkas_index.close()
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/cari.html') as berkas_cari:
-	        template_cari = berkas_cari.read()
-	    berkas_cari.close()
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/jelajah.html') as berkas_jelajah:
-	        template_jelajah = berkas_jelajah.read()
-	    berkas_jelajah.close()
-	if tipe_tema == '2':
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/index3.html') as berkas_index:
-	        template_index = berkas_index.read()
-	    berkas_index.close()
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/cari3.html') as berkas_cari:
-	        template_cari = berkas_cari.read()
-	    berkas_cari.close()
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/jelajah3.html') as berkas_jelajah:
-	        template_jelajah = berkas_jelajah.read()
-	    berkas_jelajah.close()
-	if tipe_tema == '3':
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/index4.html') as berkas_index:
-	        template_index = berkas_index.read()
-	    berkas_index.close()
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/cari4.html') as berkas_cari:
-	        template_cari = berkas_cari.read()
-	    berkas_cari.close()
-	    with open(app.config['PALAPA_FOLDER'] + 'templates/jelajah4.html') as berkas_jelajah:
-	        template_jelajah = berkas_jelajah.read()
-	    berkas_jelajah.close()
-	cap_depan = judul_situs[:1]
-	cap_belakang = judul_situs[1:]
-	logo_path = 'image/' + logo_situs
-	gambar1_path = 'image/' + berkas_gambar_1
-	gambar2_path = 'image/' + berkas_gambar_2
-	info = {}
-        sisinfo = db.session.query(Sistem).all()
-        for row in sisinfo:
-    	    print row.key, row.value
-            info[row.key] = row.value
-	template_index = template_index.replace('$$rep:captitledepan$$',cap_depan)
-	template_index = template_index.replace('$$rep:titledepan$$',cap_belakang)
-	template_index = template_index.replace('$$rep:logositus$$',logo_path)
-	template_index = template_index.replace('$$rep:gambar1$$',gambar1_path)
-	template_index = template_index.replace('$$rep:captiongambar1$$',keterangan_gambar_1)
-	template_index = template_index.replace('$$rep:gambar2$$',gambar2_path)
-	template_index = template_index.replace('$$rep:captiongambar2$$',keterangan_gambar_2)
-	template_index = template_index.replace('$$rep:innertitle$$',judul_headline)
-	template_index = template_index.replace('$$rep:innerdesc$$',keterangan_headline)
-	template_index = template_index.replace('$$rep:innertitle2$$',judul_fitur)
-	template_index = template_index.replace('$$rep:innerdesc2$$',keterangan_fitur)
-	template_index = template_index.replace('$$rep:organization$$',info['organization'])
-	template_index = template_index.replace('$$rep:address$',info['address'])
-	template_index = template_index.replace('$$rep:email$$',info['email'])
-	template_index = template_index.replace('$$rep:voice$$',info['phone'])
-	template_index = template_index.replace('$$rep:fax$$',info['fax'])
-	berkas_index_write = open(app.config['PALAPA_FOLDER'] + 'index.html', 'r+b')
-	berkas_index_write.write(template_index)
-	berkas_index_write.close()
-	template_jelajah = template_jelajah.replace('$$rep:captitledepan$$',cap_depan)
-	template_jelajah = template_jelajah.replace('$$rep:titledepan$$',cap_belakang)
-	template_jelajah = template_jelajah.replace('$$rep:logositus$$',logo_path)	
-	berkas_jelajah_write = open(app.config['PALAPA_FOLDER'] + 'jelajah.html', 'r+b')
-	berkas_jelajah_write.write(template_jelajah)
-	berkas_jelajah_write.close()
-	template_cari = template_cari.replace('$$rep:captitledepan$$',cap_depan)
-	template_cari = template_cari.replace('$$rep:titledepan$$',cap_belakang)
-	template_cari = template_cari.replace('$$rep:logositus$$',logo_path)	
-	berkas_cari_write = open(app.config['PALAPA_FOLDER'] + 'cari.html', 'r+b')
-	berkas_cari_write.write(template_cari)
-	berkas_cari_write.close()
+        header = json.loads(urllib2.unquote(request.data).split('=')[1])
+    print header
+    judul_situs = urllib2.unquote(header['pubdata']['judul_situs'])
+    logo_situs = urllib2.unquote(header['pubdata']['logo_situs'])
+    berkas_gambar_1 = urllib2.unquote(header['pubdata']['berkas_gambar_1'])
+    berkas_gambar_2 = urllib2.unquote(header['pubdata']['berkas_gambar_2'])
+    keterangan_gambar_1 = urllib2.unquote(header['pubdata']['keterangan_gambar_1'])
+    keterangan_gambar_2 = urllib2.unquote(header['pubdata']['keterangan_gambar_2'])
+    judul_headline = urllib2.unquote(header['pubdata']['judul_headline'])
+    keterangan_headline = urllib2.unquote(header['pubdata']['keterangan_headline'])
+    judul_fitur = urllib2.unquote(header['pubdata']['judul_fitur'])
+    keterangan_fitur = urllib2.unquote(header['pubdata']['keterangan_fitur'])
+    tipe_tema = urllib2.unquote(header['pubdata']['tipe_tema'])
+    c_x = header['pubdata']['c_x']
+    c_y = header['pubdata']['c_y']
+    c_zoom = header['pubdata']['c_zoom']
+    r_judul_situs = FrontendTheme.query.filter_by(key='judul_situs').first()
+    r_logo_situs = FrontendTheme.query.filter_by(key='logo_situs').first()
+    r_berkas_gambar_1 = FrontendTheme.query.filter_by(key='berkas_gambar_1').first()
+    r_berkas_gambar_2 = FrontendTheme.query.filter_by(key='berkas_gambar_2').first()
+    r_keterangan_gambar_1 = FrontendTheme.query.filter_by(key='keterangan_gambar_1').first()
+    r_keterangan_gambar_2 = FrontendTheme.query.filter_by(key='keterangan_gambar_2').first()
+    r_judul_headline = FrontendTheme.query.filter_by(key='judul_headline').first()
+    r_keterangan_headline = FrontendTheme.query.filter_by(key='keterangan_headline').first()
+    r_judul_fitur = FrontendTheme.query.filter_by(key='judul_fitur').first()
+    r_keterangan_fitur = FrontendTheme.query.filter_by(key='keterangan_fitur').first()
+    r_tipe_tema = FrontendTheme.query.filter_by(key='tipe_tema').first()
+    r_c_x = FrontendTheme.query.filter_by(key='c_x').first()
+    r_c_y = FrontendTheme.query.filter_by(key='c_y').first()
+    r_c_zoom = FrontendTheme.query.filter_by(key='c_zoom').first()
+    r_judul_situs.value = judul_situs
+    r_logo_situs.value = logo_situs
+    r_berkas_gambar_1.value = berkas_gambar_1
+    r_berkas_gambar_2.value = berkas_gambar_2
+    r_keterangan_gambar_1.value = keterangan_gambar_1
+    r_keterangan_gambar_2.value = keterangan_gambar_2
+    r_judul_headline.value = judul_headline
+    r_keterangan_headline.value = keterangan_headline
+    r_judul_fitur.value = judul_fitur
+    r_keterangan_fitur.value = keterangan_fitur
+    r_tipe_tema.value = tipe_tema
+    r_c_x.value = c_x
+    r_c_y.value = c_y
+    r_c_zoom.value = c_zoom
+    db.session.commit()	
+    if tipe_tema == '1':
+        with open(app.config['PALAPA_FOLDER'] + 'templates/index.html') as berkas_index:
+            template_index = berkas_index.read()
+        berkas_index.close()
+        with open(app.config['PALAPA_FOLDER'] + 'templates/cari.html') as berkas_cari:
+            template_cari = berkas_cari.read()
+        berkas_cari.close()
+        with open(app.config['PALAPA_FOLDER'] + 'templates/jelajah.html') as berkas_jelajah:
+            template_jelajah = berkas_jelajah.read()
+        berkas_jelajah.close()
+    if tipe_tema == '2':
+        with open(app.config['PALAPA_FOLDER'] + 'templates/index3.html') as berkas_index:
+            template_index = berkas_index.read()
+        berkas_index.close()
+        with open(app.config['PALAPA_FOLDER'] + 'templates/cari3.html') as berkas_cari:
+            template_cari = berkas_cari.read()
+        berkas_cari.close()
+        with open(app.config['PALAPA_FOLDER'] + 'templates/jelajah3.html') as berkas_jelajah:
+            template_jelajah = berkas_jelajah.read()
+        berkas_jelajah.close()
+    if tipe_tema == '3':
+        with open(app.config['PALAPA_FOLDER'] + 'templates/index4.html') as berkas_index:
+            template_index = berkas_index.read()
+        berkas_index.close()
+        with open(app.config['PALAPA_FOLDER'] + 'templates/cari4.html') as berkas_cari:
+            template_cari = berkas_cari.read()
+        berkas_cari.close()
+        with open(app.config['PALAPA_FOLDER'] + 'templates/jelajah4.html') as berkas_jelajah:
+            template_jelajah = berkas_jelajah.read()
+        berkas_jelajah.close()
+    with open(app.config['PALAPA_FOLDER'] + 'templates/cfg.js') as berkas_cfgol:
+        template_cfgol = berkas_cfgol.read()
+    berkas_cfgol.close()
+    cap_depan = judul_situs[:1]
+    cap_belakang = judul_situs[1:]
+    logo_path = 'image/' + logo_situs
+    gambar1_path = 'image/' + berkas_gambar_1
+    gambar2_path = 'image/' + berkas_gambar_2
+    info = {}
+    sisinfo = db.session.query(Sistem).all()
+    for row in sisinfo:
+        print row.key, row.value
+        info[row.key] = row.value
+    template_index = template_index.replace('$$rep:captitledepan$$',cap_depan)
+    template_index = template_index.replace('$$rep:titledepan$$',cap_belakang)
+    template_index = template_index.replace('$$rep:logositus$$',logo_path)
+    template_index = template_index.replace('$$rep:gambar1$$',gambar1_path)
+    template_index = template_index.replace('$$rep:captiongambar1$$',keterangan_gambar_1)
+    template_index = template_index.replace('$$rep:gambar2$$',gambar2_path)
+    template_index = template_index.replace('$$rep:captiongambar2$$',keterangan_gambar_2)
+    template_index = template_index.replace('$$rep:innertitle$$',judul_headline)
+    template_index = template_index.replace('$$rep:innerdesc$$',keterangan_headline)
+    template_index = template_index.replace('$$rep:innertitle2$$',judul_fitur)
+    template_index = template_index.replace('$$rep:innerdesc2$$',keterangan_fitur)
+    template_index = template_index.replace('$$rep:organization$$',info['organization'])
+    template_index = template_index.replace('$$rep:address$$',info['address'])
+    template_index = template_index.replace('$$rep:email$$',info['email'])
+    template_index = template_index.replace('$$rep:voice$$',info['phone'])
+    template_index = template_index.replace('$$rep:fax$$',info['fax'])
+    berkas_index_write = open(app.config['PALAPA_FOLDER'] + 'index.html', 'r+b')
+    berkas_index_write.write(template_index)
+    berkas_index_write.close()
+    template_jelajah = template_jelajah.replace('$$rep:captitledepan$$',cap_depan)
+    template_jelajah = template_jelajah.replace('$$rep:titledepan$$',cap_belakang)
+    template_jelajah = template_jelajah.replace('$$rep:logositus$$',logo_path)	
+    berkas_jelajah_write = open(app.config['PALAPA_FOLDER'] + 'jelajah.html', 'r+b')
+    berkas_jelajah_write.write(template_jelajah)
+    berkas_jelajah_write.close()
+    template_cari = template_cari.replace('$$rep:captitledepan$$',cap_depan)
+    template_cari = template_cari.replace('$$rep:titledepan$$',cap_belakang)
+    template_cari = template_cari.replace('$$rep:logositus$$',logo_path)	
+    berkas_cari_write = open(app.config['PALAPA_FOLDER'] + 'cari.html', 'r+b')
+    berkas_cari_write.write(template_cari)
+    berkas_cari_write.close()
+    template_cfgol = template_cfgol.replace('$$rep:c_x$$', str(c_x))
+    template_cfgol = template_cfgol.replace('$$rep:c_y$$', str(c_y))
+    template_cfgol = template_cfgol.replace('$$rep:c_zoom$$', str(c_zoom))
+    berkas_cfgol_write = open(app.config['PALAPA_FOLDER'] + 'js/cfg.js', 'r+b')
+    berkas_cfgol_write.write(template_cfgol)
+    berkas_cfgol_write.close()
     msg = json.dumps({'Result': True, 'MSG':'Data sukses disimpan!'})
     return Response(msg, mimetype='application/json')
 
 @app.route('/api/setfrontend/uploadlogo', methods=['POST'])
 def uploadlogo():
     if request.method == 'POST':
-	if 'file' not in request.files:
-	    resp = json.dumps({'Result': False, 'MSG': 'Error'})
-	    abort(400)
-	file = request.files['file']
-	print file
-	if file.filename == '':
-	    resp = json.dumps({'Result': False, 'MSG': 'Error, no file!'})
-	    return Response(resp, status=405, mimetype='application/json')
-	if file:
-	    try:
-		filename = secure_filename(file.filename)
-		print os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename)
-		file.save(os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename))
-		resp = json.dumps({'Result': True, 'MSG': 'Upload sukses!', 'VAL': filename})
-	    except:
-	        resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
+        if 'file' not in request.files:
+            resp = json.dumps({'Result': False, 'MSG': 'Error'})
+            abort(400)
+    file = request.files['file']
+    print file
+    if file.filename == '':
+        resp = json.dumps({'Result': False, 'MSG': 'Error, no file!'})
+        return Response(resp, status=405, mimetype='application/json')
+    if file:
+        try:
+            filename = secure_filename(file.filename)
+            print os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename)
+            file.save(os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename))
+            resp = json.dumps({'Result': True, 'MSG': 'Upload sukses!', 'VAL': filename})
+        except:
+            resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
     return Response(resp, mimetype='application/json')
 
 @app.route('/api/setfrontend/uploadgambar1', methods=['POST'])
 def uploadgambar1():
     if request.method == 'POST':
-	if 'file' not in request.files:
-	    resp = json.dumps({'Result': False, 'MSG': 'Error'})
-	    abort(400)
-	file = request.files['file']
-	print file
-	if file.filename == '':
-	    resp = json.dumps({'Result': False, 'MSG': 'Error, no file!'})
-	    return Response(resp, status=405, mimetype='application/json')
-	if file:
-	    try:
-		filename = secure_filename(file.filename)
-		print os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename)
-		file.save(os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename))
-		resp = json.dumps({'Result': True, 'MSG': 'Upload sukses!', 'VAL': filename})
-	    except:
-	        resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
+        if 'file' not in request.files:
+            resp = json.dumps({'Result': False, 'MSG': 'Error'})
+            abort(400)
+    file = request.files['file']
+    print file
+    if file.filename == '':
+        resp = json.dumps({'Result': False, 'MSG': 'Error, no file!'})
+        return Response(resp, status=405, mimetype='application/json')
+    if file:
+        try:
+            filename = secure_filename(file.filename)
+            print os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename)
+            file.save(os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename))
+            resp = json.dumps({'Result': True, 'MSG': 'Upload sukses!', 'VAL': filename})
+        except:
+            resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
     return Response(resp, mimetype='application/json')
 
 @app.route('/api/setfrontend/uploadgambar2', methods=['POST'])
 def uploadgambar2():
     if request.method == 'POST':
-	if 'file' not in request.files:
-	    resp = json.dumps({'Result': False, 'MSG': 'Error'})
-	    abort(400)
-	file = request.files['file']
-	print file
-	if file.filename == '':
-	    resp = json.dumps({'Result': False, 'MSG': 'Error, no file!'})
-	    return Response(resp, status=405, mimetype='application/json')
-	if file:
-	    try:
-		filename = secure_filename(file.filename)
-		print os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename)
-		file.save(os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename))
-		resp = json.dumps({'Result': True, 'MSG': 'Upload sukses!', 'VAL': filename})
-	    except:
-	        resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
+        if 'file' not in request.files:
+            resp = json.dumps({'Result': False, 'MSG': 'Error'})
+            abort(400)
+    file = request.files['file']
+    print file
+    if file.filename == '':
+        resp = json.dumps({'Result': False, 'MSG': 'Error, no file!'})
+        return Response(resp, status=405, mimetype='application/json')
+    if file:
+        try:
+            filename = secure_filename(file.filename)
+            print os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename)
+            file.save(os.path.join(app.config['PALAPA_FOLDER'] + 'image/', filename))
+            resp = json.dumps({'Result': True, 'MSG': 'Upload sukses!', 'VAL': filename})
+        except:
+            resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
     return Response(resp, mimetype='application/json')
 
 
