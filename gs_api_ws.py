@@ -1462,7 +1462,7 @@ def get_wmslayers():
       content = xmltodict.parse(xml)
       gslayer['layer_name'] = content['coverage']['title']        
       gslayer['layer_id'] = content['coverage']['nativeName']
-      amespace_id = content['coverage']['namespace']['id']
+      namespace_id = content['coverage']['namespace']['id']
       layer_id = content['coverage']['id']
       try:
         gslayer['layer_abstract'] = content['coverage']['abstract']
