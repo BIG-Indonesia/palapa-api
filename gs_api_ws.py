@@ -2716,6 +2716,16 @@ def dbdevisifeature_grup(grup):
         output['alias'] = row['alias']
         output['skala'] = row['skala']
         output['identifier'] = row['fileidentifier']
+        sql = "select * from a_view_fileidentifier where fileidentifier='%s'" % str(row['fileidentifier'])
+        con = psycopg2.connect(dbname='palapa_prod', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()  
+        cur.execute(sql)     
+        try:
+            if cur.fetchone()[0] is not None:
+                output['inprod'] = True
+        except:
+            output['inprod'] = False
         outputs.append(output)
         output = {}
     return Response(json.dumps(outputs), mimetype='application/json')    
@@ -2738,6 +2748,17 @@ def dbprodisifeature():
         output['alias'] = row['alias']
         output['skala'] = row['skala']
         output['identifier'] = row['fileidentifier']
+        sql = "select * from a_view_fileidentifier where fileidentifier='%s'" % str(row['fileidentifier'])
+        con = psycopg2.connect(dbname='palapa_pub', user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()  
+        cur.execute(sql)     
+        try:
+            if cur.fetchone()[0] is not None:
+                output['inpub'] = True
+        except:
+            output['inpub'] = False   
+        con.close()  
         outputs.append(output)
         output = {}
     return Response(json.dumps(outputs), mimetype='application/json')
@@ -3367,6 +3388,31 @@ def uploadgambar2():
             resp = json.dumps({'Result': False, 'MSG': 'Upload gagal!', 'VAL': filename})
     return Response(resp, mimetype='application/json')
 
+@app.route('/api/cekprod/<string:identifier>')
+def cekprodiden(identifier):
+    engine = create_engine(app.config['SQLALCHEMY_BINDS']['dbprod'])
+    result = engine.execute("select * from a_view_fileidentifier where fileidentifier='%s'" % (identifier))   
+    for row in result:
+        print row
+    try:
+        if row is not None:
+            resp = json.dumps({'Result': True, 'MSG': 'Ada!'})
+    except:
+        resp = json.dumps({'Result': False, 'MSG': 'Tidak Ada!'})
+    return Response(resp, mimetype='application/json')
+
+@app.route('/api/cekpub/<string:identifier>')
+def cekpubiden(identifier):
+    engine = create_engine(app.config['SQLALCHEMY_BINDS']['dbpub'])
+    result = engine.execute("select * from a_view_fileidentifier where fileidentifier='%s'" % (identifier))   
+    for row in result:
+        print row
+    try:
+        if row is not None:
+            resp = json.dumps({'Result': True, 'MSG': 'Ada!'})
+    except:
+        resp = json.dumps({'Result': False, 'MSG': 'Tidak Ada!'})
+    return Response(resp, mimetype='application/json')
 
     # APP MAIN RUNTIME
 
