@@ -261,7 +261,7 @@ def populateDB(source_shp, database, kodesimpul):
     # driver.Close(shape)
     # ogr2ogr.main(["","-f", "PostgreSQL", pg_conn, shape,"-nlt","PROMOTE_TO_MULTI"])
 
-def populateKUGI(source_shp, database, schema, table, scale):
+def populateKUGI(source_shp, database, schema, table, scale, fcode):
     # Get Layer EPSG
     print 'Source: ' + source_shp
     driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -280,11 +280,14 @@ def populateKUGI(source_shp, database, schema, table, scale):
     fitur = schema + '.' + table
     # fitur = schema + '.' + table + '_' + scale
     print fitur
+    sql = "SELECT * from '%s' WHERE FCODE='%s'" % (shape_id, fcode)
+    print sql
+    where = "FCODE=\"%s\"" % (fcode)
     try:
         EPSG = wkt2epsg(crs.ExportToWkt())
         print EPSG
         try:
-            ogro = ogr2ogr.main(["", "-append","-f", "PostgreSQL", pg_conn, shape,"-nln", fitur,"-nlt","PROMOTE_TO_MULTI", "-a_srs", EPSG])
+            ogro = ogr2ogr.main(["", "-append","-f", "PostgreSQL", pg_conn, shape,"-nln", fitur,"-nlt","PROMOTE_TO_MULTI", "-a_srs", EPSG, "-where", where])
             if ogro:
                 msg = " Data masuk ke database secara normal!"
             else:
@@ -297,7 +300,7 @@ def populateKUGI(source_shp, database, schema, table, scale):
         EPSG = "EPSG:4326"
         return msg, EPSG, source_shp.split('.')[0], str(uuided), tipe
         try:
-            ogro = ogr2ogr.main(["", "-append","-f", "PostgreSQL", pg_conn, shape,"-nln", fitur,"-nlt","PROMOTE_TO_MULTI", "-a_srs", EPSG])
+            ogro = ogr2ogr.main(["", "-append","-f", "PostgreSQL", pg_conn, shape,"-nln", fitur,"-nlt","PROMOTE_TO_MULTI", "-a_srs", EPSG, "-where", where])
             if ogro:
                 msg = " Data masuk ke database secara normal!"
             else:
@@ -341,9 +344,47 @@ def get_iden_unik(filedbf):
     table = DBF(filedbf)
     list_iden = []
     for record in table:
-        list_iden.append(record['METADATA'])
+        try:
+            list_iden.append(record['METADATA'])
+        except:
+            list_iden = []
     list_iden_unik = list(set(list_iden))
     return list_iden_unik
+
+def get_srsId(filedbf):
+    table = DBF(filedbf)
+    srsId = []
+    for record in table:
+        try:
+            srsId.append(record['SRS_ID'])
+        except:
+            srsId = []
+    srsId_unik = list(set(srsId))
+    return srsId_unik        
+
+def get_fcode(filedbf):
+    table = DBF(filedbf)
+    fcode = []
+    for record in table:
+        try:
+            fcode.append(record['FCODE'])
+        except:
+            fcode = []
+    fcode_unik = list(set(fcode))
+    return fcode_unik          
+
+def cek_fcode(schema, table):
+    engine = create_engine(app.config['SQLALCHEMY_BINDS']['dbdev'])
+    sql = "select split_part(split_part(column_default, '::', 1), '''',2) AS fcode FROM information_schema.COLUMNS WHERE table_schema = '%s' and table_name = '%s' and column_name = 'fcode'" % (str(schema), str(table))
+    result = engine.execute(sql)
+    try:
+        for row in result:
+            isi = {}
+            print row
+    except:
+        pass 
+    print "CEKFCODE:", str(row[0]) 
+    return str(row[0]) 
 
 def refresh_dbmetafieldview(database):
     db = database
@@ -2478,11 +2519,38 @@ def kugiappeddata():
                     shapefile = app.config['UPLOAD_FOLDER'] + filename.split('.')[0] + '/' + filename.split('.')[0] + '.shp'
                     dbf = app.config['UPLOAD_FOLDER'] + filename.split('.')[0] + '/' + filename.split('.')[0] + '.dbf'
                     res_iden = get_iden_unik(dbf)
+                    if res_iden == [''] or res_iden == []:
+                        resp = json.dumps({'RTN': False, 'MSG': 'Error, Field Metadata Kosong/Tidak Ada!'})
+                        return Response(resp, mimetype='application/json')
+                        abort(405)
+                    res_srsId = get_srsId(dbf)
+                    if res_srsId == [''] or res_srsId == []:
+                        resp = json.dumps({'RTN': False, 'MSG': 'Error, Field SRS_ID Kosong/Tidak Ada!'})
+                        return Response(resp, mimetype='application/json')
+                        abort(405) 
+                    res_fcode = get_fcode(dbf)       
+                    if res_fcode == [''] or res_fcode == []:
+                        resp = json.dumps({'RTN': False, 'MSG': 'Error, Field FCODE Kosong/Tidak Ada!'})
+                        return Response(resp, mimetype='application/json')
+                        abort(405)         
+                    else:
+                        fcode_cek = cek_fcode(skema, fitur)     
+                        print "CODE: FCODE, CEK:", str(res_fcode[0]), fcode_cek            
+                        if fcode_cek !=  str(res_fcode[0]):
+                            resp = json.dumps({'RTN': False, 'MSG': 'Error, Field FCODE Tidak Sesuai, cek data dengan dokumen KUGI!'})
+                            return Response(resp, mimetype='application/json')
+                            abort(405)  
+                    print "SRS:", res_srsId                
                     print "IDEN:", res_iden
+                    print "FCODE:", res_fcode
                     print "Shapefile: " + shapefile
                     if os.path.exists(shapefile):
                         print "File SHP OK"
-                        populate = populateKUGI(filename, grup + '_DEV', skema, fitur, skala)
+                        populate = populateKUGI(filename, grup + '_DEV', skema, fitur, skala, str(res_fcode[0]))
+                        if populate[5] == False:
+                            resp = json.dumps({'RTN': False, 'MSG': 'Error, Tipe Geometri tidak cocok!'})
+                            return Response(resp, mimetype='application/json')
+                            abort(405)  
                         refresh_dbmetafieldview(grup + '_DEV')
                         lid = populate[2]+'-'+populate[3]
                         SEPSG = populate[1].split(':')[1]
