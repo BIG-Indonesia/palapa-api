@@ -1,4 +1,4 @@
-from pygeometa import render_template
+from pygeometa.core import render_template
 import xmltodict
 import os
 import cfg
