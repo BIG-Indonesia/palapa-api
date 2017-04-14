@@ -34,7 +34,7 @@ from owslib.csw import CatalogueServiceWeb
 from owslib.wms import WebMapService
 from shutil import copyfile
 from big_parser import parse_big_md
-from pygeometa import render_template
+from pygeometa.core import render_template
 from dbfread import DBF
 from datetime import datetime as dt
 import StringIO
