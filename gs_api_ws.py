@@ -1680,7 +1680,17 @@ def delete_layer():
                     cur.execute(sql)                    
                     resp = json.dumps({'RTN': True, 'MSG': 'Layer berhasil dihapus'})
                 except:
-                    resp = json.dumps({'RTN': False, 'MSG': 'Layer gagal dihapus'})    
+                    resp = json.dumps({'RTN': False, 'MSG': 'Layer gagal dihapus'})  
+            try:
+                con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
+                con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+                cur = con.cursor()
+                identifierlink = workspace + ':' + header['pubdata']['layer']
+                sql = "DELETE from metadata WHERE identifier='%s';" % (str(identifierlink))    
+                print sql         
+                cur.execute(sql)    
+            except:
+                resp = json.dumps({'RTN': False, 'MSG': 'Layer gagal dihapus'}) 
         except:
             resp = json.dumps({'RTN': False, 'MSG': 'Layer gagal dihapus'}) 
         return Response(resp, mimetype='application/json')   
