@@ -3143,7 +3143,8 @@ def docs_link():
             return Response(resp, mimetype='application/json')
         file = request.files['file']
         print file
-        # print 'Param:', request.args['identifier']
+        ident = request.args['identifier']
+        # print "IDENT:",ident
         # if user does not select file, browser also
         # submit a empty part without filename
         if file.filename == '':
@@ -3157,9 +3158,10 @@ def docs_link():
             print "F:", secure_filename(file.filename)
             try:    
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['DOCUMENTS_FOLDER'], filename))
-                print "Filename: " + filename.split('.')[0]
-                docsfile = app.config['DOCUMENTS_FOLDER'] + filename
+                resfilename = ident + '-' + filename
+                file.save(os.path.join(app.config['DOCUMENTS_FOLDER'], resfilename))
+                print "Filename: " + resfilename.split('.')[0]
+                docsfile = app.config['DOCUMENTS_FOLDER'] + resfilename
                 print "docs: " + docsfile
                 if os.path.exists(docsfile):
                     print "File DOCS OK"
@@ -3185,6 +3187,37 @@ def docs_link():
                 resp = json.dumps({'RTN': False, 'MSG': 'Upload berkas pendukung gagal!'})
         return Response(resp, mimetype='application/json')    
     # return jsonify({'RTN': 'Hello!'})
+
+@app.route('/api/getdocs')
+def docs():
+    all_docs = []
+    try:
+        list_docs = os.listdir(cfg.DOCUMENTS_FOLDER)
+        for doc in list_docs:
+            d = {}
+            size = os.path.getsize(cfg.DOCUMENTS_FOLDER + doc)/1024
+            d['name'] = doc
+            d['size'] = str(size) + ' Kilobytes'
+            all_docs.append(d)
+        resp = json.dumps(all_docs)
+        return Response(resp, mimetype='application/json')
+    except:
+        list_docs = []
+        resp = json.dumps(list_docs)
+        return Response(resp, mimetype='application/json')
+
+@app.route('/api/docs/delete', methods=['POST'])
+# @auth.login_required
+def delete_docs():
+    if request.method == 'POST':
+        header = json.loads(urllib2.unquote(request.data).split('=')[1])
+        berkas = header['pubdata']
+        try:
+            os.remove(cfg.DOCUMENTS_FOLDER + berkas)
+            resp = json.dumps({'RTN': True, 'MSG': 'Success'})
+        except:
+            resp = json.dumps({'RTN': False, 'MSG': 'Error'})
+        return Response(resp, mimetype='application/json')    
 
 @app.route('/api/frontendtheme')
 def frontendtheme():
