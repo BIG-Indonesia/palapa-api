@@ -3132,6 +3132,47 @@ def crossdom():
         result = proxy['content']
     return Response(result,status=200, mimetype='text/plain')
 
+@app.route('/api/docs/add', methods=['POST'])
+# @auth.login_required
+def add_docs():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            resp = json.dumps({'MSG': 'No file part'})
+            return Response(resp, mimetype='application/json')
+        file = request.files['file']
+        ident = request.args['identifier']
+        print file
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            resp = json.dumps({'RTN': 'ERR', 'MSG': 'No selected file'})
+            return Response(resp, status=405, mimetype='application/json')
+        if not allowed_docs(file.filename):
+            resp = json.dumps({'RTN': 'ERR', 'MSG': 'Type not allowed'})
+            return Response(resp, status=405, mimetype='application/json')
+        if file and allowed_docs(file.filename):
+            # filename = secure_filename(file.filename)   
+            filename = secure_filename(file.filename)
+            resfilename = ident + '-' + filename
+            file.save(os.path.join(cfg.UPLOAD_FOLDER, resfilename))
+            docfile = cfg.UPLOAD_FOLDER + resfilename
+            if os.path.exists(docfile):
+                try:
+                    destfile = cfg.DOCUMENTS_FOLDER + resfilename
+                    copyfile(docfile, destfile)
+                    resp = json.dumps({'RTN': True, 'MSG': 'Success'})
+                except:
+                    resp = json.dumps({'RTN': False, 'MSG': 'Error, ducplicate detected!'})
+                return Response(resp, mimetype='application/json')
+            else:
+                resp = json.dumps({'RTN': False, 'MSG': 'No File'})
+                return Response(resp, status=405, mimetype='application/json')
+        resp = json.dumps({'RTN': False, 'MSG': 'Error'})
+        return Response(resp, mimetype='application/json')    
+    return jsonify({'RTN': False, 'MSG': 'OK'})
+
+
 @app.route('/api/docs/link', methods=['POST'])
 # @auth.login_required
 def docs_link():
