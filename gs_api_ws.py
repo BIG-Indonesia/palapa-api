@@ -8,7 +8,7 @@
 # tejo
 # August 2016
 
-import sys, os, shutil
+import sys, os, shutil, platform
 # abspath = os.path.dirname(__file__)
 # sys.path.append(abspath)
 # os.chdir(abspath)
@@ -88,6 +88,14 @@ ma = Marshmallow(app)
 CORS(app)
 
 # Functions
+
+# detect windows os
+import platform
+def iswindows():
+    if platform.system() == 'Windows':
+        return True
+    else:
+        return False
 
 # Mengambil data dari Geoserver REST (output JSON)
 def georest_get(rest_url, user, password):
