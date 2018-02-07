@@ -3511,5 +3511,5 @@ def cekpubiden(identifier):
 if __name__ == '__main__':
     if not os.path.exists('gs_db.sqlite'):
         db.create_all()
-    app.run(debug=True, port=5001, threaded=True, passthrough_errors=False)
+    app.run(debug=True, host='0.0.0.0', port=5001, threaded=True, passthrough_errors=False)
 
