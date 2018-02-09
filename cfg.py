@@ -5,16 +5,16 @@ SECURITY_PASSWORD_SALT = 'PALAPA_ini_PALAPA_ini_PALAPA_ini_PALAPA'
 WTF_CSRF_ENABLED = False
 SECURITY_TOKEN_MAX_AGE = 365 * 24 * 60 * 60 * 1000
 SECRET_KEY = 'PALAPA ini PALAPA ini PALAPA ini PALAPA'
-SQLALCHEMY_DATABASE_URI = 'postgres://palapa:palapa@REPGSMANAGERDOM/palapa'
+SQLALCHEMY_DATABASE_URI = 'postgres://syspalapa:sysp4l4p4@REPGSMANAGERDOM/palapa'
 SQLALCHEMY_BINDS = {
-    'dbdev': 'postgres://palapa:palapa@REPGSMANAGERDOM/palapa_dev',
-    'dbprod': 'postgres://palapa:palapa@REPGSMANAGERDOM/palapa_prod',
-    'dbpub': 'postgres://palapa:palapa@REPGSMANAGERDOM/palapa_pub',
-    'services': 'postgres://palapa:palapa@REPGSMANAGERDOM/palapa'
+    'dbdev': 'postgres://syspalapa:sysp4l4p4@REPGSMANAGERDOM/palapa_dev',
+    'dbprod': 'postgres://syspalapa:sysp4l4p4@REPGSMANAGERDOM/palapa_prod',
+    'dbpub': 'postgres://syspalapa:sysp4l4p4@REPGSMANAGERDOM/palapa_pub',
+    'services': 'postgres://syspalapa:sysp4l4p4@REPGSMANAGERDOM/palapa'
 }
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 SQLALCHEMY_TRACK_MODIFICATIONS = True
-SQLALCHEMY_DATASTORE = 'postgres://palapa:palapa@REPGSMANAGERDOM/'
+SQLALCHEMY_DATASTORE = 'postgres://syspalapa:sysp4l4p4@REPGSMANAGERDOM/'
 GEOSERVER_REST_URL = 'http://REPGSMANAGERDOM:8080/geoserver/rest/'
 GEOSERVER_WMS_URL = 'http://REPGSMANAGERDOM:8080/geoserver/wms?'
 GEOSERVER_WFS_URL = 'http://REPGSMANAGERDOM:8080/geoserver/wfs?'
@@ -28,8 +28,8 @@ GEOSERVER_LAYERS_PROP = '/var/lib/tomcat/webapps/geoserver/data/security/layers.
 GEOSERVER_SERVICES_PROP = '/var/lib/tomcat/webapps/geoserver/data/security/services.properties'
 DATASTORE_HOST = 'REPGSMANAGERDOM'
 DATASTORE_PORT = '5432'
-DATASTORE_USER = 'palapa'
-DATASTORE_PASS = 'palapa'
+DATASTORE_USER = 'syspalapa'
+DATASTORE_PASS = 'sysp4l4p4'
 DATASTORE_DB = 'palapa'
 UPLOAD_FOLDER = '/mnt/uploads/'
 RASTER_FOLDER = '/mnt/data/'
