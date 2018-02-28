@@ -159,6 +159,9 @@ def pycsw_get(csw_url, request_param):
         output = json.loads(pycsw_response.read())
     return output
 
+def str2bool(v):
+  return v.lower() in ("yes", "true", "t", "1")
+
 # Fungsi pembatasan ekstensi file yang boleh di unggah
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1] in app.config['ALLOWED_EXTENSIONS']
@@ -4303,7 +4306,8 @@ def setfrontend():
     if request.method == 'POST':
         header = json.loads(urllib2.unquote(request.data).split('json=')[1])
     print header['pubdata']
-    item_id = header['pubdata']['id']
+    # item_id = header['pubdata']['id']
+    item_id = 1
     # image_1 = header['pubdata'][0]['image_1']
     # image_2 = header['pubdata'][0]['image_2']
     # image_3 = header['pubdata'][0]['image_3']
@@ -4433,7 +4437,7 @@ def statistikpush():
         data = request.form
         header = data.to_dict(flat=False)
         print header
-        statistik = Statistik(halaman=header['halaman'][0],download=header['download'][0],ip=header['ip'][0],country_code=header['country_code'][0],country_name=header['country_name'][0],region_code=header['region_code'][0],region_name=header['region_name'][0],city=header['city'][0],zip_code=header['zip_code'][0],time_zone=header['time_zone'][0],latitude=header['latitude'][0],longitude=header['longitude'][0],metro_code=header['metro_code'][0],pencarian=header['pencarian'][0])
+        statistik = Statistik(halaman=header['halaman'][0],download=str2bool(header['download'][0]),ip=header['ip'][0],country_code=header['country_code'][0],country_name=header['country_name'][0],region_code=header['region_code'][0],region_name=header['region_name'][0],city=header['city'][0],zip_code=header['zip_code'][0],time_zone=header['time_zone'][0],latitude=header['latitude'][0],longitude=header['longitude'][0],metro_code=header['metro_code'][0],pencarian=str2bool(header['pencarian'][0]))
         db.session.add(statistik)
         db.session.commit()
     #     header = json.loads(urllib2.unquote(request.data))
