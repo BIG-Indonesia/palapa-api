@@ -84,8 +84,9 @@ app.config['CSW_URL'] = cfg.CSW_URL
 app.config['PALAPA_FOLDER'] = cfg.PALAPA_FOLDER
 app.config['GEOSERVER_DATA_DIR'] = cfg.GEOSERVER_DATA_DIR
 
-reload(sys)
-sys.setdefaultencoding('utf8')
+if platform.system() != 'Windows':
+    reload(sys)
+    sys.setdefaultencoding('utf8')
 
 engine = create_engine(app.config['SQLALCHEMY_BINDS']['services'], pool_size=30, max_overflow=0)
 engine_dev = create_engine(app.config['SQLALCHEMY_BINDS']['dbdev'], pool_size=30, max_overflow=0)
@@ -2619,8 +2620,12 @@ def minmetadata():
         with open(cfg.APP_BASE + 'CP-minimal.mcf') as file:
             mcf_minimal = file.read()
         file.close()
-        datenow = datetime
-        datestamp = datenow.datetime.now().isoformat()
+        
+        #datenow = datetime
+        #datestamp = datenow.datetime.now().isoformat()
+
+
+        datestamp = dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%a %b %d %Y %H:%M:%S').isoformat()
         # template replace
         mcf_minimal = mcf_minimal.replace('$$rep:fileIdentifier$$', fi)
         mcf_minimal = mcf_minimal.replace('$$rep:dateStamp$$', datestamp)
@@ -2677,6 +2682,417 @@ def minmetadata():
         db.session.commit()
         msg = json.dumps({'MSG':'Metadata minimal disimpan!'})
         return Response(msg, mimetype='application/json')
+
+
+@app.route('/api/lengkapmetadata', methods=['POST'])
+def lengkapmetadata():
+    if request.method == 'POST':
+        header = json.loads(urllib2.unquote(request.data).split('=')[1])
+        workspace = header['pubdata']['WORKSPACE']
+        akses = header['pubdata']['AKSES']
+        keyword = urllib2.unquote(header['pubdata']['KEYWORD'])
+        print akses
+        if akses == 'PUBLIC':
+            restriction = 'unclassified'
+        if akses == 'GOVERNMENT':
+            restriction = 'restricted'
+        if akses.split(':')[0] == 'GOVERNMENT':
+            restriction = 'restricted'
+        if akses == 'PRIVATE':
+            restriction = 'confendential'
+        if akses == 'IGSTRATEGIS':
+            restriction = 'topsecret'
+        try:
+            selectedsimpul = header['pubdata']['SELECTEDSIMPUL']
+        except:
+            selectedsimpul = ''
+        layer_id = header['pubdata']['ID']
+        
+        
+        #update maskuri
+
+        layer_title = urllib2.unquote(header['pubdata']['title_identification'])
+        
+        try:
+            layer_abstract = urllib2.unquote(header['pubdata']['ABSTRACT'])
+        except:
+            layer_abstract = layer_title
+        print header
+        # distro
+        info = {}
+        sisinfo = db.session.query(Sistem).all()
+        for row in sisinfo:
+            info[row.key] = row.value
+            resp = json.dumps(info)
+
+        print urllib2.unquote(header['pubdata']['tanggal']) #Tue Feb 13 2018 15:58:15 GMT
+        # gs_api_ws.dt.strptime('Tue Feb 13 2018 15:58:15 GMT','%a %b %d %Y %H:%M:%S %Z').isoformat()
+        print dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%a %b %d %Y %H:%M:%S').isoformat()
+        
+        # print dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%b %d %Y %I:%M%p').isoformat()
+        # print dt.strptime('Jun 1 2005  1:33PM', '%b %d %Y %I:%M%p')
+        # print dt.strptime('Jun 1 2005  1:33PM', '%b %d %Y %I:%M%p').isoformat()
+
+        # print urllib2.unquote(header['pubdata']['tanggal']).isoformat()
+
+
+
+
+        
+
+
+        distorganisationName =  urllib2.unquote(header['pubdata']['Distributor_organisationName'])
+
+        
+        #distdataSetURI = info['url']
+
+        distdataSetURI =  urllib2.unquote(header['pubdata']['dataSetURI'])
+        print urllib2.unquote(header['pubdata']['dataSetURI'])
+        
+
+
+        distindividualName =  urllib2.unquote(header['pubdata']['Distributor_individualName'])
+        distpositionName =  urllib2.unquote(header['pubdata']['Distributor_positionName'])
+        distvoice =  urllib2.unquote(header['pubdata']['Distributor_phone'])
+        distfacsimile =  urllib2.unquote(header['pubdata']['Distributor_facsimile'])
+        
+        distdeliveryPoint = urllib2.unquote(header['pubdata']['Distributor_deliveryPoint'])
+        
+        distcity =  urllib2.unquote(header['pubdata']['Distributor_city'])
+        distadministrativeArea = info['administrativearea']
+        distpostalCode = urllib2.unquote(header['pubdata']['Distributor_postalCode'])
+        distcountry = urllib2.unquote(header['pubdata']['Distributor_country'])
+        distelectronicMailAddress =   urllib2.unquote(header['pubdata']['Distributor_electronicMailAddress'])
+        disthoursOfServiceidentifi2 = urllib2.unquote(header['pubdata']['Distributor_hoursOfService'])
+        distcontactInstructionsidentifi2 = urllib2.unquote(header['pubdata']['Distributor_contactInstructions'])
+       
+       # grup
+        group = Group.query.filter_by(name=header['pubdata']['WORKSPACE']).first()
+        organisationName =  urllib2.unquote(header['pubdata']['organisationName'])
+        
+        #dataSetURI = group.url
+
+        print urllib2.unquote(header['pubdata']['linkage'])
+        dataSetURI =  urllib2.unquote(header['pubdata']['linkage'])
+        
+        individualName =  urllib2.unquote(header['pubdata']['individualName'])
+        positionName =  urllib2.unquote(header['pubdata']['positionName'])
+        voice =  urllib2.unquote(header['pubdata']['phone'])
+        facsimile =  urllib2.unquote(header['pubdata']['facsimile']) 
+        deliveryPoint =  urllib2.unquote(header['pubdata']['deliveryPoint'])
+        city =  urllib2.unquote(header['pubdata']['city'])
+        administrativeArea = group.administrativearea
+        postalCode =  urllib2.unquote(header['pubdata']['postalCode'])
+        country = urllib2.unquote(header['pubdata']['country'])            
+        electronicMailAddress =   urllib2.unquote(header['pubdata']['electronicMailAddress'])
+        
+        hoursOfServiceidentifi2 = urllib2.unquote(header['pubdata']['hoursOfService'])
+        contactInstructionsidentifi2 = urllib2.unquote(header['pubdata']['contactInstructions'])
+        fi = workspace + ':' + layer_id
+
+        # update maskuri
+
+       
+
+        # template
+        with open(cfg.APP_BASE + 'CP-minimal.mcf') as file:
+            mcf_lengkap = file.read()
+        file.close()
+        
+        # datenow = datetime
+        # print datenow
+        # print datetime.now()
+        # print datenow.datetime.now() 
+        # datestamp = datenow.datetime.now().isoformat()
+       
+        datestamp = dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%a %b %d %Y %H:%M:%S').isoformat()
+        # template replace
+        mcf_lengkap = mcf_lengkap.replace('$$rep:fileIdentifier$$', fi)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:dateStamp$$', datestamp)
+        # ident
+        mcf_lengkap = mcf_lengkap.replace('$$rep:title$$', layer_title)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:abstract$$', layer_abstract)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:keywords$$', keyword)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:topicCategory$$', 'location')
+        mcf_lengkap = mcf_lengkap.replace('$$rep:publicationDate$$', datestamp)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:feesidentifi7$$', 'N/A')
+        mcf_lengkap = mcf_lengkap.replace('$$rep:organisationNameIdentifi$$', workspace)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:security$$', restriction)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:secnote$$', akses)
+        # contact
+        mcf_lengkap = mcf_lengkap.replace('$$rep:organisationName$$', organisationName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:dataSetURI$$', dataSetURI)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:individualName$$', individualName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:positionName$$', positionName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:voice$$', voice)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:facsimile$$', facsimile)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:deliveryPoint$$', deliveryPoint)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:city$$', city)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:administrativeArea$$', administrativeArea)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:postalCode$$', postalCode)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:country$$', country)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:electronicMailAddress$$', electronicMailAddress)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:hoursOfServiceidentifi2$$', hoursOfServiceidentifi2)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:contactInstructionsidentifi2$$', contactInstructionsidentifi2)
+        # contact distro
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distorganisationName$$', distorganisationName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distdataSetURI$$', distdataSetURI)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distindividualName$$', distindividualName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distpositionName$$', distpositionName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distvoice$$', distvoice)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distfacsimile$$', distfacsimile)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distdeliveryPoint$$', distdeliveryPoint)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distcity$$', distcity)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distadministrativeArea$$', distadministrativeArea)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distpostalCode$$', distpostalCode)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distcountry$$', distcountry)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distelectronicMailAddress$$', distelectronicMailAddress)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:disthoursOfServiceidentifi2$$', disthoursOfServiceidentifi2)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distcontactInstructionsidentifi2$$', distcontactInstructionsidentifi2)
+        print mcf_lengkap
+        # render XML
+        rendered_xml = render_template(mcf_lengkap, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
+        print rendered_xml
+        # insert XML to metalinks
+        metalinks = Metalinks.query.filter_by(identifier=layer_id).first()
+        # print metalinks
+        metalinks.xml = rendered_xml
+        metalinks.metatick = 'Y'
+        metalinks.akses = akses
+        metalinks.keyword = keyword
+        db.session.commit()
+        msg = json.dumps({'MSG':'Metadata Berhasil disimpan!'})
+        return Response(msg, mimetype='application/json')
+
+
+@app.route('/api/lengkapmetakugi', methods=['POST'])
+def lengkapmetakugi():
+    if request.method == 'POST':
+        header = json.loads(urllib2.unquote(request.data).split('=')[1])
+        workspace = header['pubdata']['WORKSPACE']
+        print "oa"
+        print workspace
+        akses = header['pubdata']['AKSES']
+        keyword = urllib2.unquote(header['pubdata']['KEYWORD'])
+        print akses
+        if akses == 'PUBLIC':
+            restriction = 'unclassified'
+        if akses == 'GOVERNMENT':
+            restriction = 'restricted'
+        if akses.split(':')[0] == 'GOVERNMENT':
+            restriction = 'restricted'
+        if akses == 'PRIVATE':
+            restriction = 'confendential'
+        if akses == 'IGSTRATEGIS':
+            restriction = 'topsecret'
+        try:
+            selectedsimpul = header['pubdata']['SELECTEDSIMPUL']
+        except:
+            selectedsimpul = ''
+        layer_id = header['pubdata']['ID']
+        
+        
+        #update maskuri
+
+
+        JENISDATABASE = urllib2.unquote(header['pubdata']['JENISDATABASE'])
+
+        layer_title = urllib2.unquote(header['pubdata']['title_identification'])
+        
+        try:
+            layer_abstract = urllib2.unquote(header['pubdata']['ABSTRACT'])
+        except:
+            layer_abstract = layer_title
+        print header
+        # distro
+        info = {}
+        sisinfo = db.session.query(Sistem).all()
+        print sisinfo
+        for row in sisinfo:
+            info[row.key] = row.value
+            resp = json.dumps(info)
+
+       
+
+        print urllib2.unquote(header['pubdata']['tanggal']) #Tue Feb 13 2018 15:58:15 GMT
+        # gs_api_ws.dt.strptime('Tue Feb 13 2018 15:58:15 GMT','%a %b %d %Y %H:%M:%S %Z').isoformat()
+        print dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%a %b %d %Y %H:%M:%S').isoformat()
+        
+        # print dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%b %d %Y %I:%M%p').isoformat()
+        # print dt.strptime('Jun 1 2005  1:33PM', '%b %d %Y %I:%M%p')
+        # print dt.strptime('Jun 1 2005  1:33PM', '%b %d %Y %I:%M%p').isoformat()
+
+        # print urllib2.unquote(header['pubdata']['tanggal']).isoformat()
+
+
+
+
+        
+
+
+        distorganisationName =  urllib2.unquote(header['pubdata']['Distributor_organisationName'])
+
+        
+        #distdataSetURI = info['url']
+
+        distdataSetURI =  urllib2.unquote(header['pubdata']['dataSetURI'])
+        print urllib2.unquote(header['pubdata']['dataSetURI'])
+        
+
+
+        distindividualName =  urllib2.unquote(header['pubdata']['Distributor_individualName'])
+        distpositionName =  urllib2.unquote(header['pubdata']['Distributor_positionName'])
+        distvoice =  urllib2.unquote(header['pubdata']['Distributor_phone'])
+        distfacsimile =  urllib2.unquote(header['pubdata']['Distributor_facsimile'])
+        
+        distdeliveryPoint = urllib2.unquote(header['pubdata']['Distributor_deliveryPoint'])
+        
+        distcity =  urllib2.unquote(header['pubdata']['Distributor_city'])
+        distadministrativeArea = info['administrativearea']
+        distpostalCode = urllib2.unquote(header['pubdata']['Distributor_postalCode'])
+        distcountry = urllib2.unquote(header['pubdata']['Distributor_country'])
+        distelectronicMailAddress =   urllib2.unquote(header['pubdata']['Distributor_electronicMailAddress'])
+        disthoursOfServiceidentifi2 = urllib2.unquote(header['pubdata']['Distributor_hoursOfService'])
+        distcontactInstructionsidentifi2 = urllib2.unquote(header['pubdata']['Distributor_contactInstructions'])
+       
+       # grup
+        group = Group.query.filter_by(name=header['pubdata']['WORKSPACE']).first()
+
+
+        try:
+            administrativeArea = group.administrativearea
+            if group.administrativearea == None:
+                administrativeArea = ""
+            print "administrativeArea:", administrativeArea
+        except:
+            administrativeArea = ''
+            print "tidak ada"
+
+           
+       
+        
+
+
+
+        organisationName =  urllib2.unquote(header['pubdata']['organisationName'])
+        
+        #dataSetURI = group.url
+
+        print urllib2.unquote(header['pubdata']['linkage'])
+        dataSetURI =  urllib2.unquote(header['pubdata']['linkage'])
+        
+        individualName =  urllib2.unquote(header['pubdata']['individualName'])
+        positionName =  urllib2.unquote(header['pubdata']['positionName'])
+        voice =  urllib2.unquote(header['pubdata']['phone'])
+        facsimile =  urllib2.unquote(header['pubdata']['facsimile']) 
+        deliveryPoint =  urllib2.unquote(header['pubdata']['deliveryPoint'])
+        city =  urllib2.unquote(header['pubdata']['city'])
+       
+        postalCode =  urllib2.unquote(header['pubdata']['postalCode'])
+        country = urllib2.unquote(header['pubdata']['country'])            
+        electronicMailAddress =   urllib2.unquote(header['pubdata']['electronicMailAddress'])
+        
+        hoursOfServiceidentifi2 = urllib2.unquote(header['pubdata']['hoursOfService'])
+        contactInstructionsidentifi2 = urllib2.unquote(header['pubdata']['contactInstructions'])
+        fi = workspace + ':' + layer_id
+
+        # update maskuri
+
+       
+
+        # template
+        with open(cfg.APP_BASE + 'CP-minimal.mcf') as file:
+            mcf_lengkap = file.read()
+        file.close()
+        
+        # datenow = datetime
+        # print datenow
+        # print datetime.now()
+        # print datenow.datetime.now() 
+        # datestamp = datenow.datetime.now().isoformat()
+       
+        datestamp = dt.strptime(urllib2.unquote(header['pubdata']['tanggal']),'%a %b %d %Y %H:%M:%S').isoformat()
+        # template replace
+        mcf_lengkap = mcf_lengkap.replace('$$rep:fileIdentifier$$', fi)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:dateStamp$$', datestamp)
+        # ident
+        mcf_lengkap = mcf_lengkap.replace('$$rep:title$$', layer_title)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:abstract$$', layer_abstract)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:keywords$$', keyword)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:topicCategory$$', 'location')
+        mcf_lengkap = mcf_lengkap.replace('$$rep:publicationDate$$', datestamp)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:feesidentifi7$$', 'N/A')
+        mcf_lengkap = mcf_lengkap.replace('$$rep:organisationNameIdentifi$$', workspace)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:security$$', restriction)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:secnote$$', akses)
+        # contact
+        mcf_lengkap = mcf_lengkap.replace('$$rep:organisationName$$', organisationName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:dataSetURI$$', dataSetURI)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:individualName$$', individualName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:positionName$$', positionName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:voice$$', voice)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:facsimile$$', facsimile)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:deliveryPoint$$', deliveryPoint)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:city$$', city)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:administrativeArea$$', administrativeArea)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:postalCode$$', postalCode)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:country$$', country)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:electronicMailAddress$$', electronicMailAddress)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:hoursOfServiceidentifi2$$', hoursOfServiceidentifi2)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:contactInstructionsidentifi2$$', contactInstructionsidentifi2)
+        # contact distro
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distorganisationName$$', distorganisationName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distdataSetURI$$', distdataSetURI)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distindividualName$$', distindividualName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distpositionName$$', distpositionName)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distvoice$$', distvoice)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distfacsimile$$', distfacsimile)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distdeliveryPoint$$', distdeliveryPoint)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distcity$$', distcity)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distadministrativeArea$$', distadministrativeArea)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distpostalCode$$', distpostalCode)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distcountry$$', distcountry)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distelectronicMailAddress$$', distelectronicMailAddress)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:disthoursOfServiceidentifi2$$', disthoursOfServiceidentifi2)
+        mcf_lengkap = mcf_lengkap.replace('$$rep:distcontactInstructionsidentifi2$$', distcontactInstructionsidentifi2)
+        print mcf_lengkap
+        # render XML
+        rendered_xml = render_template(mcf_lengkap, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
+        #print rendered_xml
+        if JENISDATABASE == 'DEV':
+            print 'DEV'
+            metakugi = Metakugi_dev.query.filter_by(identifier=layer_id).first()
+            #print metakugi
+            metakugi.xml = rendered_xml
+            metakugi.metatick = 'Y'
+            metakugi.akses = akses
+            metakugi.keyword = keyword
+            db.session.commit()
+        elif JENISDATABASE == 'PROD':
+            print 'PROD'
+            metakugi = Metakugi_prod.query.filter_by(identifier=layer_id).first()
+            #print metakugi
+            metakugi.xml = rendered_xml
+            metakugi.metatick = 'Y'
+            metakugi.akses = akses
+            metakugi.keyword = keyword
+            db.session.commit()
+        else :
+            print 'PUB'
+            metakugi = Metakugi.query.filter_by(identifier=layer_id).first()
+            #print metakugi
+            metakugi.xml = rendered_xml
+            metakugi.metatick = 'Y'
+            metakugi.akses = akses
+            metakugi.keyword = keyword
+            db.session.commit()
+
+
+        # insert XML to metalinks
+        
+        msg = json.dumps({'MSG':'Metadata Berhasil disimpan!'})
+        return Response(msg, mimetype='application/json')
+
 
 
 @app.route('/api/generate_wms_thumbnails')
@@ -3208,6 +3624,43 @@ def metakugi_prod_view():
     metalink = Metakugi_prod.query.filter_by(identifier=request.args['identifier']).first()
     xml = metalink.xml
     return Response(xml, mimetype='application/xml')
+
+
+
+@app.route('/api/meta/view_json')
+# @auth.login_required
+def meta_view_json():
+    metalink = Metalinks.query.filter_by(identifier=request.args['identifier']).first()
+    xml = metalink.xml
+    js = xmltodict.parse(xml)
+    return Response(json.dumps(js), mimetype='application/json')
+
+@app.route('/api/metakugi/view_json')
+# @auth.login_required
+def metakugi_view_json():
+    metalink = Metakugi.query.filter_by(identifier=request.args['identifier']).first()
+    xml = metalink.xml
+    js = xmltodict.parse(xml)
+    return Response(json.dumps(js), mimetype='application/json')
+
+
+@app.route('/api/metakugi_dev/view_json')
+# @auth.login_required
+def metakugi_dev_view_json():
+    metalink = Metakugi_dev.query.filter_by(identifier=request.args['identifier']).first()
+    xml = metalink.xml
+    js = xmltodict.parse(xml)
+    return Response(json.dumps(js), mimetype='application/json')
+
+@app.route('/api/metakugi_prod/view_json')
+# @auth.login_required
+def metakugi_prod_view_json():
+    metalink = Metakugi_prod.query.filter_by(identifier=request.args['identifier']).first()
+    xml = metalink.xml
+    js = xmltodict.parse(xml)
+    return Response(json.dumps(js), mimetype='application/json')
+
+
 
 @app.route('/api/meta/list')
 # @auth.login_required
