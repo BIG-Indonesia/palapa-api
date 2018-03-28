@@ -34,6 +34,7 @@ from owslib.csw import CatalogueServiceWeb
 from owslib.wms import WebMapService
 from shutil import copyfile
 from big_parser import parse_big_md
+from big_parser import parse_metadata_md
 from pygeometa import render_template
 from dbfread import DBF
 from datetime import datetime as dt
@@ -87,6 +88,7 @@ app.config['GEOSERVER_DATA_DIR'] = cfg.GEOSERVER_DATA_DIR
 if platform.system() != 'Windows':
     reload(sys)
     sys.setdefaultencoding('utf8')
+       
 
 engine = create_engine(app.config['SQLALCHEMY_BINDS']['services'], pool_size=30, max_overflow=0)
 engine_dev = create_engine(app.config['SQLALCHEMY_BINDS']['dbdev'], pool_size=30, max_overflow=0)
@@ -592,7 +594,7 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         akses = xmlmeta.akses
         metalinks = Metalinks.query.filter_by(identifier=identifier).first()
         keyword = metalinks.keyword
-    mcf_template = parse_big_md(xml_payload)
+    mcf_template = parse_metadata_md(xml_payload)
     try:
         print "Identifier:", layer_id
         print "Workspace:", layer_workspace
@@ -636,6 +638,8 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         except:
             mcf_template = mcf_template.replace('$$rep:keywords$$', 'Lain-lain')
         rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
+        print rendered_xml
+
     # print rendered_xml
     except:
         msg = json.dumps({'MSG':'Metadata tidak sesuai standar!'})
@@ -2451,7 +2455,7 @@ def pycsw_insert():
             fi = workspace + ':' + identifier
             xmlmeta = Metalinks.query.filter_by(identifier=identifier).first()
             xml_payload = xmlmeta.xml
-        mcf_template = parse_big_md(xml_payload)
+        mcf_template = parse_metadata_md(xml_payload)
         try:
             print "Identifier:", header['pubdata']['identifier']
             print "Workspace:", header['pubdata']['workspace']
@@ -2468,8 +2472,8 @@ def pycsw_insert():
             if akses == 'IGSTRATEGIS':
                 restriction = 'topsecret'
             print restriction
+            print "ya jalan"
             wms = WebMapService(app.config['GEOSERVER_WMS_URL'], version='1.1.1')
-            print wms
             bbox = wms[fi].boundingBoxWGS84
             wb = str(bbox[0])
             sb = str(bbox[1])
@@ -2479,8 +2483,9 @@ def pycsw_insert():
             print bboxwgs84
             wmslink = app.config['GEOSERVER_WMS_URL'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"  + "&CQL_FILTER=metadata='" + identifier + "'"
             wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&CQL_FILTER=metadata='" + identifier + "'"
-            print wmslink
-            print wfslink
+            
+            # print wmslink
+            # print wfslink
             mcf_template = mcf_template.replace('$$rep:fileIdentifier$$', fi)
             # mcf_template = mcf_template.replace('$$rep:individualName$$', individualName)
             # mcf_template = mcf_template.replace('$$rep:organisationName$$', organisationName)
@@ -2498,14 +2503,18 @@ def pycsw_insert():
             # mcf_template = mcf_template.replace('$$rep:eb84$$', eb)
             # mcf_template = mcf_template.replace('$$rep:nb84$$', nb)
             mcf_template = mcf_template.replace('$$rep:bboxwgs84$$', bboxwgs84)
+            print "ok"
+            #print mcf_template
             rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
-        # print rendered_xml
+            print rendered_xml
+            csw = CatalogueServiceWeb(app.config['CSW_URL'])
+            cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
         except:
             msg = json.dumps({'MSG':'Metadata tidak sesuai standar!'})
         # try:
-        # print rendered_xml
-        csw = CatalogueServiceWeb(app.config['CSW_URL'])
-        cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
+        #print rendered_xml
+        # csw = CatalogueServiceWeb(app.config['CSW_URL'])
+        # cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
         if workspace == 'KUGI':
             metakugi = Metakugi.query.filter_by(identifier=header['pubdata']['identifier']).first()
             metakugi.published = 'Y'
@@ -2672,7 +2681,7 @@ def minmetadata():
         print mcf_minimal
         # render XML
         rendered_xml = render_template(mcf_minimal, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
-        print rendered_xml
+        #print rendered_xml
         # insert XML to metalinks
         metalinks = Metalinks.query.filter_by(identifier=layer_id).first()
         metalinks.xml = rendered_xml

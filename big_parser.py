@@ -2396,3 +2396,405 @@ def parse_big_md(input_xml):
     # ff.close()
 
     return xml_template
+
+
+def parse_metadata_md(input_xml):
+    dictxml = xmltodict.parse(input_xml)
+    
+    #print dictxml
+
+    #metadata
+    try:
+        datestamp = dictxml["gmd:MD_Metadata"]["gmd:dateStamp"]["gco:DateTime"]
+        if datestamp.strip() == None:
+            datestamp = '2018-01-01T01:01:01'
+        print "datestamp = ", datestamp
+    except:
+        datestamp = '2018-01-01T01:01:01'
+        print "datestamp = ", datestamp
+
+    #Identification Info    
+    try:
+        layer_title = dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:citation"]["gmd:CI_Citation"]["gmd:title"]["gco:CharacterString"]
+        if layer_title.strip() == None:
+            layer_title = "Belum Ada"
+        print "layer_title = ", layer_title
+    except:
+        layer_title = "Belum Ada"
+        print "layer_title = ", layer_title
+
+    try:
+        keyword=dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:descriptiveKeywords"]["gmd:MD_Keywords"]["gmd:keyword"]["gco:CharacterString"]
+        if keyword.strip() == None:
+            keyword = "Lain-lain"
+        print "keyword = ", keyword
+    except:
+        keyword = "Lain-lain"
+        print "keyword = ", keyword
+
+    
+    #Distributor
+    
+    try:
+        distorganisationName = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:organisationName"]["gco:CharacterString"]
+        if distorganisationName.strip() == None:
+            distorganisationName = "Belum Ada"
+        print "distorganisationName = ", distorganisationName
+    except:
+        distorganisationName = "Belum Ada"
+        print "distorganisationName = ", distorganisationName
+
+    try:
+        distindividualName = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:individualName"]["gco:CharacterString"]
+        if distindividualName.strip() == None:
+            distindividualName = "Belum Ada"
+        print "distindividualName = ", distindividualName
+    except:
+        distindividualName = "Belum Ada "
+        print "distindividualName = ", distindividualName
+
+    try:
+        distpositionName = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:positionName"]["gco:CharacterString"]
+        if distpositionName.strip() == None:
+            distpositionName = "Belum Ada"
+        print "distpositionName = ", distpositionName
+    except:
+        distpositionName = "Belum Ada"
+        print "distpositionName = ", dispositionName 
+
+    try: 
+        distvoice=dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:phone"]["gmd:CI_Telephone"]["gmd:voice"]["gco:CharacterString"]
+        if distvoice.strip() == None:
+            distvoice = "Belum Ada"
+        print "distvoice = ", distvoice
+    except:
+        voice = "Belum Ada"
+        print "distvoice = ", distvoice
+
+    try:
+        distfacsimile = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:phone"]["gmd:CI_Telephone"]["gmd:facsimile"]["gco:CharacterString"]
+        if distfacsimile.strip() == None:
+            distfacsimile = "Belum Ada"
+        print "distfacsimile = ", distfacsimile
+    except:
+        distfacsimile = "Belum Ada"
+        print "distfacsimile = ", distfacsimile
+    
+
+    try:
+        distdeliveryPoint = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:deliveryPoint"]["gco:CharacterString"]
+        if distdeliveryPoint.strip() == None:
+            distdeliveryPoint = "Belum Ada"
+        print "distdeliveryPoint = ", distdeliveryPoint
+    except:
+        distdeliveryPoint = "Belum Ada"
+        print "distdeliveryPoint = ", distdeliveryPoint
+
+    try:
+        distcity = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:city"]["gco:CharacterString"]
+        if distcity.strip() == None:
+            distcity = "Belum Ada"
+        print "distcity = ", distcity
+    except:
+        distcity = "Belum Ada"
+        print "distcity = ", distcity
+
+    try:
+        distadministrativeArea = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:administrativeArea"]["gco:CharacterString"]
+        if distadministrativeArea.strip() == None:
+            distadministrativeArea = "Belum Ada"
+        print "distadministrativeArea = ", distadministrativeArea
+    except:
+        distadministrativeArea = "Belum Ada"
+        print "distadministrativeArea = ", distadministrativeArea
+
+    try: 
+        distpostalCode = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:postalCode"]["gco:CharacterString"]
+        if  distpostalCode.strip() == None:
+            distpostalCode = "Belum Ada"
+        print "distpostalCode = ", distpostalCode
+    except:
+        distpostalCode = "Belum Ada"
+        print "distpostalCode = ", distpostalCode
+
+    try:
+        distcountry = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:country"]["gco:CharacterString"]
+        if distcountry.strip() == None:
+            distcountry = "Belum Ada"
+        print "distcountry = ", distcountry
+    except:
+        distcountry ="Belum Ada"
+        print "distcountry = ", distcountry
+        
+    try:
+        distelectronicMailAddress = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:electronicMailAddress"]["gco:CharacterString"]
+        if distelectronicMailAddress.strip() == None:
+            distelectronicMailAddress = "Belum Ada"
+        print "distelectronicMailAddress = ", distelectronicMailAddress
+    except:
+        distelectronicMailAddress = "Belum Ada"
+        print "distelectronicMailAddress = ", distelectronicMailAddress
+        
+    try: 
+        distdataSetURI = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:onlineResource"]["gmd:CI_OnlineResource"]["gmd:linkage"]["gmd:URL"]
+        if distdataSetURI.strip() == None:
+            distdataSetURI = "Belum Ada"
+        print "distdataSetURI = ", distdataSetURI
+    except:
+        distdataSetURI = "Belum Ada"
+        print "distdataSetURI = ", distdataSetURI 
+  
+    try:
+        disthoursOfServiceidentifi2 = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:hoursOfService"]["gco:CharacterString"]
+        if disthoursOfServiceidentifi2.strip() == None:
+            disthoursOfServiceidentifi2 = "Belum Ada"
+        print "disthoursOfServiceidentifi2 = ",  disthoursOfServiceidentifi2 
+    except:
+        disthoursOfServiceidentifi2 = "Belum Ada"
+        print "disthoursOfServiceidentifi2 = ",  disthoursOfServiceidentifi2
+     
+    try:
+        distcontactInstructionsidentifi2 = dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:contactInstructions"]["gco:CharacterString"]
+        if  distcontactInstructionsidentifi2.strip() == None:
+             distcontactInstructionsidentifi2 = "Belum Ada"
+        print  "distcontactInstructionsidentifi2 = ", distcontactInstructionsidentifi2
+    except:
+         distcontactInstructionsidentifi2 = "Belum Ada"
+         print  "distcontactInstructionsidentifi2 = ", distcontactInstructionsidentifi2
+
+    #Contact                  
+        
+    try:
+        individualName = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:individualName"]["gco:CharacterString"]
+        if individualName.strip() == None:
+            individualName = "Belum Ada"
+        print "individualName = ", individualName
+    except:
+        individualName = "Belum Ada"
+        print "individualName = ", individualName
+   
+    try:
+        organisationName = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:organisationName"]["gco:CharacterString"]
+        if organisationName.strip() == None:
+            organisationName = "Belum Ada"
+        print "organisationName = ", organisationName
+    except:
+        organisationName = "Belum Ada"
+        print "organisationName = ", organisationName
+
+    try:
+        positionName = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:positionName"]["gco:CharacterString"]
+        if positionName.strip() == None:
+            positionName = "Belum Ada"
+        print "positionName = ", positionName
+    except:
+        positionName = "Belum Ada"
+        print "positionName = ", positionName
+
+    try:
+        voice = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:phone"]["gmd:CI_Telephone"]["gmd:voice"]["gco:CharacterString"]
+        if voice.strip() == None:
+            voice = "Belum Ada"
+        print "voice = ", voice
+    except:
+        voice = "Belum Ada"
+        print "voice = ", voice
+    
+    try:
+        facsimile = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:phone"]["gmd:CI_Telephone"]["gmd:facsimile"]["gco:CharacterString"]
+        if  facsimile.strip() == None:
+            facsimile = "Belum Ada"
+        print "facsimile = ", facsimile
+    except:
+        facsimile = "Belum Ada"
+   
+    try:
+        deliveryPoint = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:deliveryPoint"]["gco:CharacterString"]
+        if deliveryPoint.strip() == None:
+            deliveryPoint = ""
+        print "deliveryPoint = ", deliveryPoint
+    except:
+        deliveryPoint = "Belum Ada"
+        print "deliveryPoint = ", deliveryPoint
+
+     
+    
+    try:
+        city = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:city"]["gco:CharacterString"]
+        if city.strip() == None:
+            city = "Belum Ada"
+        print "city = ", city
+    except:
+        print "city = ", city
+
+    try:
+        administrativeArea = ["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:administrativeArea"]["gco:CharacterString"]
+        if administrativeArea.strip() == None:
+            administrativeArea = "Belum Ada"
+        print "administrativeArea = ", administrativeArea
+    except:
+        administrativeArea = "Belum Ada"
+        print "administrativeArea = ", administrativeArea
+
+    try:
+        postalCode = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:postalCode"]["gco:CharacterString"]
+        if postalCode.strip() == None:
+            postalCode = "Belum Ada"
+        print "postalCode = ", postalCode
+    except:
+        postalCode = "Belum Ada"
+        print "postalCode = ", postalCode
+
+
+    try:
+        country = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:country"]["gco:CharacterString"]
+        if country.strip() == None:
+            country = "Belum Ada"
+        print "country =", country
+    except:
+        country = "Belum Ada"
+        print "country =", country
+
+    
+    try:
+        electronicMailAddress = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:electronicMailAddress"]["gco:CharacterString"]
+        if electronicMailAddress.strip() == None:
+            electronicMailAddress = "Belum Ada"
+        print "electronicMailAddress = ", electronicMailAddress
+    except:
+        electronicMailAddress = "Belum Ada"
+        print "electronicMailAddress = ", electronicMailAddress
+
+    
+    try:
+        dataSetURI = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:onlineResource"]["gmd:CI_OnlineResource"]["gmd:linkage"]["gmd:URL"]
+        if dataSetURI.strip() == None:
+            dataSetURI = "Belum Ada"
+        print "dataSetURI = ", dataSetURI
+    except:
+        dataSetURI = "Belum Ada"
+        print "dataSetURI = ", dataSetURI
+   
+    try:
+        hoursOfServiceidentifi2 = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:hoursOfService"]["gco:CharacterString"]
+        if  hoursOfServiceidentifi2.strip() == None:
+            hoursOfServiceidentifi2 = "Belum Ada"
+        print "hoursOfServiceidentifi2 = ",  hoursOfServiceidentifi2
+    except:
+        hoursOfServiceidentifi2 = "Belum Ada"
+        print "hoursOfServiceidentifi2 = ",  hoursOfServiceidentifi2
+ 
+    
+    try:
+        contactInstructionsidentifi2 = (dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:contactInstructions"]["gco:CharacterString"]);
+        if contactInstructionsidentifi2.strip() == None:
+            contactInstructionsidentifi2 = "Belum Ada"
+        print "contactInstructionsidentifi2 = ", contactInstructionsidentifi2
+    except:
+        contactInstructionsidentifi2 = "Belum Ada"
+        print "contactInstructionsidentifi2 = ", contactInstructionsidentifi2
+   
+
+
+    with open(cfg.APP_BASE + 'CP-indonesia.mcf', 'r') as file_mcf_lengkap:
+        mcf_lengkap = file_mcf_lengkap.read()
+
+    # template replace
+    mcf_lengkap = mcf_lengkap.replace('$$rep:dateStamp$$', datestamp)
+    #ident
+    mcf_lengkap = mcf_lengkap.replace('$$rep:title$$', layer_title)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:keywords$$', keyword)
+    #contact
+    mcf_lengkap = mcf_lengkap.replace('$$rep:organisationName$$', organisationName)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:dataSetURI$$', dataSetURI)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:individualName$$', individualName)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:positionName$$', positionName)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:voice$$', voice)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:facsimile$$', facsimile)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:deliveryPoint$$', deliveryPoint)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:city$$', city)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:administrativeArea$$', administrativeArea)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:postalCode$$', postalCode)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:country$$', country)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:electronicMailAddress$$', electronicMailAddress)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:hoursOfServiceidentifi2$$', hoursOfServiceidentifi2)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:contactInstructionsidentifi2$$', contactInstructionsidentifi2)
+    # contact distro
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distorganisationName$$', distorganisationName)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distdataSetURI$$', distdataSetURI)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distindividualName$$', distindividualName)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distpositionName$$', distpositionName)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distvoice$$', distvoice)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distfacsimile$$', distfacsimile)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distdeliveryPoint$$', distdeliveryPoint)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distcity$$', distcity)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distadministrativeArea$$', distadministrativeArea)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distpostalCode$$', distpostalCode)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distcountry$$', distcountry)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distelectronicMailAddress$$', distelectronicMailAddress)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:disthoursOfServiceidentifi2$$', disthoursOfServiceidentifi2)
+    mcf_lengkap = mcf_lengkap.replace('$$rep:distcontactInstructionsidentifi2$$', distcontactInstructionsidentifi2)
+
+    return mcf_lengkap
+
+
+
+     # try {
+     #                    scope.tanggalku2 = (dictxml["gmd:MD_Metadata"]["gmd:dateStamp"]["gco:DateTime"]);
+     #                    scope.tanggalku = new Date(scope.tanggalku2);
+     #                }  catch (err) {
+     #                    scope.tanggalku = new Date();
+     #                }    
+
+     #                console.log(scope.tanggalku);
+
+     #                try {
+     #                    scope.layer_id = scope.model.item.identifier; 
+     #                } catch (err)
+     #                {
+     #                    scope.layer_id = (Math.random());
+     #                }
+
+     #                console.log(scope.layer_id);
+
+     #                scope.workspace_kugi = scope.model.item.workspace;
+                    
+     #                console.log(scope.workspace_kugi);
+
+                    
+
+     #                try {
+     #                    scope.layer_abstract = (dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:abstract"]["gco:CharacterString"]); 
+     #                } catch (err)
+     #                {
+     #                    scope.layer_abstract = "Data Tidak Ada";
+     #                }
+                    
+     #                console.log(scope.layer_abstract)
+
+     #                try {
+     #                    scope.keyword_item = (dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:descriptiveKeywords"]["gmd:MD_Keywords"]["gmd:keyword"]["gco:CharacterString"]); 
+     #                } catch (err)
+     #                {
+     #                    scope.keyword_item ="";
+     #                }
+     #                console.log(scope.keyword_item);
+
+                    
+     #                try {
+     #                    scope.datausernote =(dictxml["gmd:MD_Metadata"]["gmd:metadataConstrains"]["gmd:MD_SecurityConstraints"]["gmd:userNote"]["gco:CharacterString"]);
+     #                } catch (err)
+     #                {
+     #                    scope.datausernote = "";
+     #                } 
+
+     #                  console.log(scope.datausernote);                                                         
+                     
+
+
+     #                scope.akses = {  
+     #                        "value": scope.datausernote, 
+     #                        "values": [ "PUBLIC", "GOVERNMENT", "PRIVATE", "IGSTRATEGIS"] 
+     #                      };
+
+ 
