@@ -319,7 +319,14 @@ def populateKUGI(source_shp, database, schema, table, scale, fcode):
     print fitur
     sql = "SELECT * from '%s' WHERE FCODE='%s'" % (shape_id, fcode)
     print sql
-    where = "FCODE=\"%s\"" % (fcode)
+    
+    if iswindows() == True:
+        where = "FCODE=\'%s\'" % (fcode)
+        print 'windows'
+    else:
+        where = "FCODE=\"%s\"" % (fcode)
+        print 'linux'
+    
     try:
         EPSG = wkt2epsg(crs.ExportToWkt())
         print EPSG
@@ -638,7 +645,7 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         except:
             mcf_template = mcf_template.replace('$$rep:keywords$$', 'Lain-lain')
         rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
-        print rendered_xml
+        #print rendered_xml
 
     # print rendered_xml
     except:
@@ -2287,7 +2294,13 @@ def return_publishkugi():
 def layer_adv():
     if request.method == 'POST':
         header = json.loads(urllib2.unquote(request.data).split('=')[1])
+        print '********************************************************'
+        print 'data header'
+        print 'data header'
         print(header)
+        print 'data header'
+        print 'data header'
+        print '********************************************************'
         toggle = header['pubdata']['aktif']
         try:
             catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
@@ -2296,6 +2309,7 @@ def layer_adv():
             resource.abstract = urllib2.unquote(header['pubdata']['abstract'])
             resource.enabled = header['pubdata']['aktif']
             layer_id = header['pubdata']['id']
+            print 'baris 2306 = ', layer_id
             layer_workspace = header['pubdata']['nativename'].split(':')[0]
             layer_tipe = header['pubdata']['tipe']
             catalog.save(resource)
@@ -2321,14 +2335,18 @@ def layer_adv():
             catalog.save(res)
             catalog.reload()
             # time.sleep(5)
+            print "baris 2331 Ok"
             if toggle == False:
                 # try:
                 #     print("Tier1")
                 #     pycswadv(layer_id,layer_workspace,layer_tipe)
                 # except:
                 #     print("ERR")
+                print "baris 2337 Ok"
                 print(layer_id,layer_workspace,layer_tipe)
+                print "baris 2340 Ok"
                 pycsw_publish = pycswadv(layer_id,layer_workspace,layer_tipe)
+                print "baris 2342 Ok"
                 print(pycsw_publish)
                 resp = json.dumps({'RTN': True, 'MSG': 'Layer sukses diaktifkan'})
             else:
@@ -2337,6 +2355,7 @@ def layer_adv():
                 #     pycswdel(layer_id, layer_workspace)
                 # except:
                 #     print("ERR2")
+                print "baris 2349 Ok"
                 print(layer_id,layer_workspace,layer_tipe)
                 pycsw_delete = pycswdel(layer_id, layer_workspace)
                 print(pycsw_delete)
@@ -2506,7 +2525,7 @@ def pycsw_insert():
             print "ok"
             #print mcf_template
             rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
-            print rendered_xml
+            #print rendered_xml
             csw = CatalogueServiceWeb(app.config['CSW_URL'])
             cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
         except:
@@ -2864,7 +2883,7 @@ def lengkapmetadata():
         print rendered_xml
         # insert XML to metalinks
         metalinks = Metalinks.query.filter_by(identifier=layer_id).first()
-        # print metalinks
+        print 'object metalinks = ', metalinks
         metalinks.xml = rendered_xml
         metalinks.metatick = 'Y'
         metalinks.akses = akses
@@ -3298,6 +3317,7 @@ def kugiappeddata():
                             resp = json.dumps({'RTN': False, 'MSG': 'Error, Field FCODE Tidak Sesuai, cek data dengan dokumen KUGI!'})
                             return Response(resp, mimetype='application/json')
                             abort(405)
+                    print "Metadata:", res_iden
                     print "SRS:", res_srsId
                     print "IDEN:", res_iden
                     print "FCODE:", res_fcode
