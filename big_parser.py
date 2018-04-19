@@ -2426,11 +2426,20 @@ def parse_metadata_md(input_xml):
     try:
         keyword=dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:descriptiveKeywords"]["gmd:MD_Keywords"]["gmd:keyword"]["gco:CharacterString"]
         if keyword.strip() == None:
-            keyword = "Lain-lain"
+            keyword = "Vegetasi"
         print "keyword = ", keyword
     except:
-        keyword = "Lain-lain"
+        keyword = "Vegetasi"
         print "keyword = ", keyword
+
+    try:   
+        abstract = dictxml['gmd:MD_Metadata']['gmd:identificationInfo']['gmd:MD_DataIdentification']['gmd:abstract']['gco:CharacterString'].replace('\n','').replace('?','')
+        if abstract.strip() == None:
+            abstract = 'tidak ada'
+        print "abstract:", abstract
+    except:
+        abstract = 'Tidak Ada'
+        print "abstract = ", abstract
 
     
     #Distributor
@@ -2460,7 +2469,7 @@ def parse_metadata_md(input_xml):
         print "distpositionName = ", distpositionName
     except:
         distpositionName = "Belum Ada"
-        print "distpositionName = ", dispositionName 
+        print "distpositionName = ", distpositionName 
 
     try: 
         distvoice=dictxml["gmd:MD_Metadata"]["gmd:distributionInfo"]["gmd:MD_Distribution"]["gmd:distributor"]["gmd:MD_Distributor"]["gmd:distributorContact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:phone"]["gmd:CI_Telephone"]["gmd:voice"]["gco:CharacterString"]
@@ -2468,7 +2477,7 @@ def parse_metadata_md(input_xml):
             distvoice = "Belum Ada"
         print "distvoice = ", distvoice
     except:
-        voice = "Belum Ada"
+        distvoice = "Belum Ada"
         print "distvoice = ", distvoice
 
     try:
@@ -2696,105 +2705,52 @@ def parse_metadata_md(input_xml):
    
 
 
-    with open(cfg.APP_BASE + 'CP-indonesia.mcf', 'r') as file_mcf_lengkap:
-        mcf_lengkap = file_mcf_lengkap.read()
+    with open(cfg.APP_BASE + 'CP-indonesia.mcf', 'r') as file_xml_template:
+        xml_template = file_xml_template.read()
+
+
+
+    # with open(cfg.APP_BASE + 'CP-indonesia.mcf', 'r') as file_mcf_lengkap:
+    #     mcf_lengkap = file_mcf_lengkap.read()
+
+
+
 
     # template replace
-    mcf_lengkap = mcf_lengkap.replace('$$rep:dateStamp$$', datestamp)
+    xml_template = xml_template.replace('$$rep:dateStamp$$', datestamp)
     #ident
-    mcf_lengkap = mcf_lengkap.replace('$$rep:title$$', layer_title)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:keywords$$', keyword)
+    xml_template = xml_template.replace('$$rep:title$$', layer_title)
+    xml_template = xml_template.replace('$$rep:keywords$$', keyword)
+    xml_template = xml_template.replace('$$rep:abstract$$', abstract) #27
     #contact
-    mcf_lengkap = mcf_lengkap.replace('$$rep:organisationName$$', organisationName)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:dataSetURI$$', dataSetURI)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:individualName$$', individualName)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:positionName$$', positionName)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:voice$$', voice)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:facsimile$$', facsimile)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:deliveryPoint$$', deliveryPoint)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:city$$', city)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:administrativeArea$$', administrativeArea)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:postalCode$$', postalCode)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:country$$', country)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:electronicMailAddress$$', electronicMailAddress)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:hoursOfServiceidentifi2$$', hoursOfServiceidentifi2)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:contactInstructionsidentifi2$$', contactInstructionsidentifi2)
+    xml_template = xml_template.replace('$$rep:organisationName$$', organisationName)
+    xml_template = xml_template.replace('$$rep:dataSetURI$$', dataSetURI)
+    xml_template = xml_template.replace('$$rep:individualName$$', individualName)
+    xml_template = xml_template.replace('$$rep:positionName$$', positionName)
+    xml_template = xml_template.replace('$$rep:voice$$', voice)
+    xml_template = xml_template.replace('$$rep:facsimile$$', facsimile)
+    xml_template = xml_template.replace('$$rep:deliveryPoint$$', deliveryPoint)
+    xml_template = xml_template.replace('$$rep:city$$', city)
+    xml_template = xml_template.replace('$$rep:administrativeArea$$', administrativeArea)
+    xml_template = xml_template.replace('$$rep:postalCode$$', postalCode)
+    xml_template = xml_template.replace('$$rep:country$$', country)
+    xml_template = xml_template.replace('$$rep:electronicMailAddress$$', electronicMailAddress)
+    xml_template = xml_template.replace('$$rep:hoursOfServiceidentifi2$$', hoursOfServiceidentifi2)
+    xml_template = xml_template.replace('$$rep:contactInstructionsidentifi2$$', contactInstructionsidentifi2)
     # contact distro
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distorganisationName$$', distorganisationName)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distdataSetURI$$', distdataSetURI)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distindividualName$$', distindividualName)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distpositionName$$', distpositionName)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distvoice$$', distvoice)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distfacsimile$$', distfacsimile)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distdeliveryPoint$$', distdeliveryPoint)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distcity$$', distcity)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distadministrativeArea$$', distadministrativeArea)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distpostalCode$$', distpostalCode)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distcountry$$', distcountry)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distelectronicMailAddress$$', distelectronicMailAddress)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:disthoursOfServiceidentifi2$$', disthoursOfServiceidentifi2)
-    mcf_lengkap = mcf_lengkap.replace('$$rep:distcontactInstructionsidentifi2$$', distcontactInstructionsidentifi2)
+    xml_template = xml_template.replace('$$rep:distorganisationName$$', distorganisationName)
+    xml_template = xml_template.replace('$$rep:distdataSetURI$$', distdataSetURI)
+    xml_template = xml_template.replace('$$rep:distindividualName$$', distindividualName)
+    xml_template = xml_template.replace('$$rep:distpositionName$$', distpositionName)
+    xml_template = xml_template.replace('$$rep:distvoice$$', distvoice)
+    xml_template = xml_template.replace('$$rep:distfacsimile$$', distfacsimile)
+    xml_template = xml_template.replace('$$rep:distdeliveryPoint$$', distdeliveryPoint)
+    xml_template = xml_template.replace('$$rep:distcity$$', distcity)
+    xml_template = xml_template.replace('$$rep:distadministrativeArea$$', distadministrativeArea)
+    xml_template = xml_template.replace('$$rep:distpostalCode$$', distpostalCode)
+    xml_template = xml_template.replace('$$rep:distcountry$$', distcountry)
+    xml_template = xml_template.replace('$$rep:distelectronicMailAddress$$', distelectronicMailAddress)
+    xml_template = xml_template.replace('$$rep:disthoursOfServiceidentifi2$$', disthoursOfServiceidentifi2)
+    xml_template = xml_template.replace('$$rep:distcontactInstructionsidentifi2$$', distcontactInstructionsidentifi2)
 
-    return mcf_lengkap
-
-
-
-     # try {
-     #                    scope.tanggalku2 = (dictxml["gmd:MD_Metadata"]["gmd:dateStamp"]["gco:DateTime"]);
-     #                    scope.tanggalku = new Date(scope.tanggalku2);
-     #                }  catch (err) {
-     #                    scope.tanggalku = new Date();
-     #                }    
-
-     #                console.log(scope.tanggalku);
-
-     #                try {
-     #                    scope.layer_id = scope.model.item.identifier; 
-     #                } catch (err)
-     #                {
-     #                    scope.layer_id = (Math.random());
-     #                }
-
-     #                console.log(scope.layer_id);
-
-     #                scope.workspace_kugi = scope.model.item.workspace;
-                    
-     #                console.log(scope.workspace_kugi);
-
-                    
-
-     #                try {
-     #                    scope.layer_abstract = (dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:abstract"]["gco:CharacterString"]); 
-     #                } catch (err)
-     #                {
-     #                    scope.layer_abstract = "Data Tidak Ada";
-     #                }
-                    
-     #                console.log(scope.layer_abstract)
-
-     #                try {
-     #                    scope.keyword_item = (dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:descriptiveKeywords"]["gmd:MD_Keywords"]["gmd:keyword"]["gco:CharacterString"]); 
-     #                } catch (err)
-     #                {
-     #                    scope.keyword_item ="";
-     #                }
-     #                console.log(scope.keyword_item);
-
-                    
-     #                try {
-     #                    scope.datausernote =(dictxml["gmd:MD_Metadata"]["gmd:metadataConstrains"]["gmd:MD_SecurityConstraints"]["gmd:userNote"]["gco:CharacterString"]);
-     #                } catch (err)
-     #                {
-     #                    scope.datausernote = "";
-     #                } 
-
-     #                  console.log(scope.datausernote);                                                         
-                     
-
-
-     #                scope.akses = {  
-     #                        "value": scope.datausernote, 
-     #                        "values": [ "PUBLIC", "GOVERNMENT", "PRIVATE", "IGSTRATEGIS"] 
-     #                      };
-
- 
+    return xml_template
