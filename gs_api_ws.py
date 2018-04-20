@@ -3089,7 +3089,7 @@ def lengkapmetakugi():
         #print rendered_xml
         if JENISDATABASE == 'DEV':
             print 'DEV'
-            metakugi = Metakugi_dev.query.filter_by(identifier=layer_id).first()
+            metakugi = Metakugi_dev.query.filter_by(fitur=layer_id).first()
             #print metakugi
             metakugi.xml = rendered_xml
             metakugi.metatick = 'Y'
@@ -3098,7 +3098,7 @@ def lengkapmetakugi():
             db.session.commit()
         elif JENISDATABASE == 'PROD':
             print 'PROD'
-            metakugi = Metakugi_prod.query.filter_by(identifier=layer_id).first()
+            metakugi = Metakugi_prod.query.filter_by(fitur=layer_id).first()
             #print metakugi
             metakugi.xml = rendered_xml
             metakugi.metatick = 'Y'
@@ -3107,7 +3107,7 @@ def lengkapmetakugi():
             db.session.commit()
         else :
             print 'PUB'
-            metakugi = Metakugi.query.filter_by(identifier=layer_id).first()
+            metakugi = Metakugi.query.filter_by(fitur=layer_id).first()
             #print metakugi
             metakugi.xml = rendered_xml
             metakugi.metatick = 'Y'
