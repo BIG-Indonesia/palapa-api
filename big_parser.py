@@ -2620,7 +2620,7 @@ def parse_metadata_md(input_xml):
     try:
         deliveryPoint = dictxml["gmd:MD_Metadata"]["gmd:contact"]["gmd:CI_ResponsibleParty"]["gmd:contactInfo"]["gmd:CI_Contact"]["gmd:address"]["gmd:CI_Address"]["gmd:deliveryPoint"]["gco:CharacterString"]
         if deliveryPoint.strip() == None:
-            deliveryPoint = ""
+            deliveryPoint = "Belum Ada"
         print "deliveryPoint = ", deliveryPoint
     except:
         deliveryPoint = "Belum Ada"
@@ -2634,6 +2634,7 @@ def parse_metadata_md(input_xml):
             city = "Belum Ada"
         print "city = ", city
     except:
+        city = "Belum Ada"
         print "city = ", city
 
     try:
