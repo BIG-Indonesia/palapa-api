@@ -2516,6 +2516,8 @@ def pycsw_insert():
             mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_URL'])
             #mcf_template = mcf_template.replace('$$rep:geoserverwms$$', wmslink)
             mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_URL'])
+            mcf_template = mcf_template.replace('$$rep:geoserverfullwms$$', wmslink)
+            mcf_template = mcf_template.replace('$$rep:geoserverfullwfs$$', wfslink)
             #mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', wfslink)
             # mcf_template = mcf_template.replace('$$rep:wb84$$', wb)
             # mcf_template = mcf_template.replace('$$rep:sb84$$', sb)
@@ -2525,15 +2527,13 @@ def pycsw_insert():
             print "ok"
             #print mcf_template
             rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
-            #print rendered_xml
-            csw = CatalogueServiceWeb(app.config['CSW_URL'])
-            cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
+            #print rendered_xml    
         except:
             msg = json.dumps({'MSG':'Metadata tidak sesuai standar!'})
         # try:
         #print rendered_xml
-        # csw = CatalogueServiceWeb(app.config['CSW_URL'])
-        # cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
+        csw = CatalogueServiceWeb(app.config['CSW_URL'])
+        cswtrans = csw.transaction(ttype='insert', typename='gmd:MD_Metadata', record=rendered_xml)
         if workspace == 'KUGI':
             metakugi = Metakugi.query.filter_by(identifier=header['pubdata']['identifier']).first()
             metakugi.published = 'Y'
@@ -2553,6 +2553,7 @@ def pycswRecordDelete():
         header = json.loads(urllib2.unquote(request.data).split('=')[1])
         print header
         identifier = header['pubdata']['identifier']
+        identifierkugi = 'KUGI:'+ header['pubdata']['identifier']
         workspace = header['pubdata']['workspace']
         try:
             con = psycopg2.connect(dbname=app.config['DATASTORE_DB'], user=app.config['DATASTORE_USER'], host=app.config['DATASTORE_HOST'], password=app.config['DATASTORE_PASS'])
@@ -2560,10 +2561,10 @@ def pycswRecordDelete():
             cur = con.cursor()
             if workspace == 'KUGI':
                 print "WK KUGI"
-                sql = "DELETE from metadata WHERE identifier='%s';" % (str(identifier))
+                sql = "DELETE from metadata WHERE identifier='%s';" % (str(identifierkugi))
                 print sql
                 cur.execute(sql)
-                sqlm = "UPDATE metakugi SET published='N' WHERE identifier='%s';" % (str(identifier))
+                sqlm = "UPDATE metakugi SET published='N' WHERE fitur='%s';" % (str(identifier))
                 cur.execute(sqlm)
             else:
                 print "WK OTHERS"
