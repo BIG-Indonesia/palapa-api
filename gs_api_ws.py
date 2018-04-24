@@ -639,6 +639,7 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_URL'])
         mcf_template = mcf_template.replace('$$rep:geoserverfullwfs$$', wfslink)
         mcf_template = mcf_template.replace('$$rep:bboxwgs84$$', bboxwgs84)
+        mcf_template = mcf_template.replace('$$rep:topicCategory$$', 'location')
         # mcf_template = mcf_template.replace('$$rep:keywords$$', keyword)
         try:
             mcf_template = mcf_template.replace('$$rep:keywords$$', keyword)
@@ -2524,6 +2525,7 @@ def pycsw_insert():
             # mcf_template = mcf_template.replace('$$rep:eb84$$', eb)
             # mcf_template = mcf_template.replace('$$rep:nb84$$', nb)
             mcf_template = mcf_template.replace('$$rep:bboxwgs84$$', bboxwgs84)
+            mcf_template = mcf_template.replace('$$rep:topicCategory$$', 'location')
             print "ok"
             #print mcf_template
             rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
