@@ -602,55 +602,55 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         metalinks = Metalinks.query.filter_by(identifier=identifier).first()
         keyword = metalinks.keyword
     mcf_template = parse_metadata_md(xml_payload)
+    # try:
+    print "Identifier:", layer_id
+    print "Workspace:", layer_workspace
+    print "Akses:", akses
+    print fi
+    if akses == 'PUBLIC':
+        restriction = 'unclassified'
+    if akses == 'GOVERNMENT':
+        restriction = 'restricted'
+    if akses.split(':')[0] == 'GOVERNMENT':
+        restriction = 'restricted'
+    if akses == 'PRIVATE':
+        restriction = 'confendential'
+    if akses == 'IGSTRATEGIS':
+        restriction = 'topsecret'
+    print restriction
+    wms = WebMapService(app.config['GEOSERVER_WMS_URL'], version='1.1.1')
+    print wms
+    bbox = wms[fi].boundingBoxWGS84
+    wb = str(bbox[0])
+    sb = str(bbox[1])
+    eb = str(bbox[2])
+    nb = str(bbox[3])
+    bboxwgs84 = wb+','+sb+','+eb+','+nb
+    print bboxwgs84
+    wmslink = app.config['GEOSERVER_WMS_URL'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"
+    wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&outputFormat=shape-zip"
+    print wmslink
+    print wfslink
+    mcf_template = mcf_template.replace('$$rep:fileIdentifier$$', fi)
+    mcf_template = mcf_template.replace('$$rep:security$$', restriction)
+    mcf_template = mcf_template.replace('$$rep:secnote$$', akses)
+    mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_URL'])
+    mcf_template = mcf_template.replace('$$rep:geoserverfullwms$$', wmslink)
+    mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_URL'])
+    mcf_template = mcf_template.replace('$$rep:geoserverfullwfs$$', wfslink)
+    mcf_template = mcf_template.replace('$$rep:bboxwgs84$$', bboxwgs84)
+    mcf_template = mcf_template.replace('$$rep:topicCategory$$', 'location')
+    # mcf_template = mcf_template.replace('$$rep:keywords$$', keyword)
     try:
-        print "Identifier:", layer_id
-        print "Workspace:", layer_workspace
-        print "Akses:", akses
-        print fi
-        if akses == 'PUBLIC':
-            restriction = 'unclassified'
-        if akses == 'GOVERNMENT':
-            restriction = 'restricted'
-        if akses.split(':')[0] == 'GOVERNMENT':
-            restriction = 'restricted'
-        if akses == 'PRIVATE':
-            restriction = 'confendential'
-        if akses == 'IGSTRATEGIS':
-            restriction = 'topsecret'
-        print restriction
-        wms = WebMapService(app.config['GEOSERVER_WMS_URL'], version='1.1.1')
-        print wms
-        bbox = wms[fi].boundingBoxWGS84
-        wb = str(bbox[0])
-        sb = str(bbox[1])
-        eb = str(bbox[2])
-        nb = str(bbox[3])
-        bboxwgs84 = wb+','+sb+','+eb+','+nb
-        print bboxwgs84
-        wmslink = app.config['GEOSERVER_WMS_URL'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"
-        wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&outputFormat=shape-zip"
-        print wmslink
-        print wfslink
-        mcf_template = mcf_template.replace('$$rep:fileIdentifier$$', fi)
-        mcf_template = mcf_template.replace('$$rep:security$$', restriction)
-        mcf_template = mcf_template.replace('$$rep:secnote$$', akses)
-        mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_URL'])
-        mcf_template = mcf_template.replace('$$rep:geoserverfullwms$$', wmslink)
-        mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_URL'])
-        mcf_template = mcf_template.replace('$$rep:geoserverfullwfs$$', wfslink)
-        mcf_template = mcf_template.replace('$$rep:bboxwgs84$$', bboxwgs84)
-        mcf_template = mcf_template.replace('$$rep:topicCategory$$', 'location')
-        # mcf_template = mcf_template.replace('$$rep:keywords$$', keyword)
-        try:
-            mcf_template = mcf_template.replace('$$rep:keywords$$', keyword)
-        except:
-            mcf_template = mcf_template.replace('$$rep:keywords$$', 'Lain-lain')
-        rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
-        #print rendered_xml
+        mcf_template = mcf_template.replace('$$rep:keywords$$', keyword)
+    except:
+        mcf_template = mcf_template.replace('$$rep:keywords$$', 'Lain-lain')
+    rendered_xml = render_template(mcf_template, schema_local=app.config['APP_BASE'] + 'CP-indonesia')
+    #print rendered_xml
 
     # print rendered_xml
-    except:
-        msg = json.dumps({'MSG':'Metadata tidak sesuai standar!'})
+    # except:
+    #     msg = json.dumps({'MSG':'Metadata tidak sesuai standar!'})
     # try:
     # print rendered_xml
     csw = CatalogueServiceWeb(app.config['CSW_URL'])
