@@ -2303,66 +2303,66 @@ def layer_adv():
         print 'data header'
         print '********************************************************'
         toggle = header['pubdata']['aktif']
-        try:
-            catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
-            resource = catalog.get_resource(header['pubdata']['id'])
-            resource.title = urllib2.unquote(header['pubdata']['title'])
-            resource.abstract = urllib2.unquote(header['pubdata']['abstract'])
-            resource.enabled = header['pubdata']['aktif']
-            layer_id = header['pubdata']['id']
-            print 'baris 2306 = ', layer_id
-            layer_workspace = header['pubdata']['nativename'].split(':')[0]
-            layer_tipe = header['pubdata']['tipe']
-            catalog.save(resource)
-            catalog.reload()
-            if header['pubdata']['tipe'] == 'VECTOR':
-                layer = catalog.get_layer(header['pubdata']['nativename'])
-                res = layer.resource
-                if toggle == False:
-                    print "STAT1",res.enabled
-                    res.enabled = 'true'
-                else:
-                    print "STAT2",res.enabled
-                    res.enabled = 'false'
-            if header['pubdata']['tipe'] == 'RASTER':
-                layer = catalog.get_layer(header['pubdata']['id'])
-                res = layer.resource
-                if toggle == False:
-                    print "STAT3",res.enabled
-                    res.enabled = 'true'
-                else:
-                    print "STAT4",res.enabled
-                    res.enabled = 'false'
-            catalog.save(res)
-            catalog.reload()
-            # time.sleep(5)
-            print "baris 2331 Ok"
+        # try:
+        catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
+        resource = catalog.get_resource(header['pubdata']['id'])
+        resource.title = urllib2.unquote(header['pubdata']['title'])
+        resource.abstract = urllib2.unquote(header['pubdata']['abstract'])
+        resource.enabled = header['pubdata']['aktif']
+        layer_id = header['pubdata']['id']
+        print 'baris 2306 = ', layer_id
+        layer_workspace = header['pubdata']['nativename'].split(':')[0]
+        layer_tipe = header['pubdata']['tipe']
+        catalog.save(resource)
+        catalog.reload()
+        if header['pubdata']['tipe'] == 'VECTOR':
+            layer = catalog.get_layer(header['pubdata']['nativename'])
+            res = layer.resource
             if toggle == False:
-                # try:
-                #     print("Tier1")
-                #     pycswadv(layer_id,layer_workspace,layer_tipe)
-                # except:
-                #     print("ERR")
-                print "baris 2337 Ok"
-                print(layer_id,layer_workspace,layer_tipe)
-                print "baris 2340 Ok"
-                pycsw_publish = pycswadv(layer_id,layer_workspace,layer_tipe)
-                print "baris 2342 Ok"
-                print(pycsw_publish)
-                resp = json.dumps({'RTN': True, 'MSG': 'Layer sukses diaktifkan'})
+                print "STAT1",res.enabled
+                res.enabled = 'true'
             else:
-                # try:
-                #     print("Tier1")
-                #     pycswdel(layer_id, layer_workspace)
-                # except:
-                #     print("ERR2")
-                print "baris 2349 Ok"
-                print(layer_id,layer_workspace,layer_tipe)
-                pycsw_delete = pycswdel(layer_id, layer_workspace)
-                print(pycsw_delete)
-                resp = json.dumps({'RTN': True, 'MSG': 'Layer sukses di non-aktifkan'})
-        except:
-            resp = json.dumps({'RTN': False, 'MSG': 'Layer gagal diaktifkan-kan'})
+                print "STAT2",res.enabled
+                res.enabled = 'false'
+        if header['pubdata']['tipe'] == 'RASTER':
+            layer = catalog.get_layer(header['pubdata']['id'])
+            res = layer.resource
+            if toggle == False:
+                print "STAT3",res.enabled
+                res.enabled = 'true'
+            else:
+                print "STAT4",res.enabled
+                res.enabled = 'false'
+        catalog.save(res)
+        catalog.reload()
+        # time.sleep(5)
+        print "baris 2331 Ok"
+        if toggle == False:
+            # try:
+            #     print("Tier1")
+            #     pycswadv(layer_id,layer_workspace,layer_tipe)
+            # except:
+            #     print("ERR")
+            print "baris 2337 Ok"
+            print(layer_id,layer_workspace,layer_tipe)
+            print "baris 2340 Ok"
+            pycsw_publish = pycswadv(layer_id,layer_workspace,layer_tipe)
+            print "baris 2342 Ok"
+            print(pycsw_publish)
+            resp = json.dumps({'RTN': True, 'MSG': 'Layer sukses diaktifkan'})
+        else:
+            # try:
+            #     print("Tier1")
+            #     pycswdel(layer_id, layer_workspace)
+            # except:
+            #     print("ERR2")
+            print "baris 2349 Ok"
+            print(layer_id,layer_workspace,layer_tipe)
+            pycsw_delete = pycswdel(layer_id, layer_workspace)
+            print(pycsw_delete)
+            resp = json.dumps({'RTN': True, 'MSG': 'Layer sukses di non-aktifkan'})
+        # except:
+        #     resp = json.dumps({'RTN': False, 'MSG': 'Layer gagal diaktifkan-kan'})
         return Response(resp, mimetype='application/json')
 
 @app.route('/api/cswRecords')
