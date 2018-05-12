@@ -4359,10 +4359,10 @@ def listmetalayer():
             bbox = ''
         if bbox != '':
             print 'ARGS H'
-            sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier" % (bbox)
+            sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier ORDER BY insert_date DESC " % (bbox)
         else:
             print 'ARGS I'
-            sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata GROUP BY identifier"
+            sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata GROUP BY identifier ORDER BY insert_date DESC "
     print sqlmeta
     resultsql = engine.execute(sa_text(sqlmeta)).fetchall()
     resultkey = engine.execute(sa_text(sqlmeta)).keys()
