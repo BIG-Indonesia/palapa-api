@@ -15,7 +15,7 @@ import sys, os, shutil, platform
 import urllib2, json, base64, sqlalchemy, sqlalchemy_utils, zipfile, ogr, shapefile, psycopg2, uuid, jwt, time, datetime, re
 import ogr2ogr, osr, re, gdal, xmltodict, fnmatch
 import flask
-from flask import Flask, abort, request, redirect, jsonify, g, url_for, send_from_directory, Response, stream_with_context
+from flask import Flask, abort, request, redirect, jsonify, g, url_for, send_from_directory, Response, stream_with_context, send_file
 from flask_jwt import JWT, jwt_required, current_identity
 from werkzeug import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
@@ -25,6 +25,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from flask_httpauth import HTTPBasicAuth
 from flask_cors import CORS, cross_origin
+from flask_compress import Compress
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 from flask_marshmallow import Marshmallow
@@ -42,10 +43,14 @@ from sqlalchemy import and_, create_engine, func, or_, desc
 from sqlalchemy.sql import text as sa_text
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
+from PIL import Image
+from io import BytesIO
+import zipfile
 import StringIO
 import proxypy
 import cfg
 import requests
+import html2text
 
 # initialization
 app = Flask(__name__)
@@ -84,6 +89,7 @@ app.config['ALLOWED_RASTER'] = cfg.ALLOWED_RASTER
 app.config['CSW_URL'] = cfg.CSW_URL
 app.config['PALAPA_FOLDER'] = cfg.PALAPA_FOLDER
 app.config['GEOSERVER_DATA_DIR'] = cfg.GEOSERVER_DATA_DIR
+app.config['F_DOWNLOADS'] = cfg.F_DOWNLOADS
 
 if platform.system() != 'Windows':
     reload(sys)
@@ -100,6 +106,7 @@ db = SQLAlchemy(app)
 auth = HTTPBasicAuth()
 ma = Marshmallow(app)
 CORS(app)
+Compress(app)
 
 Base = declarative_base()
 
@@ -693,7 +700,57 @@ def pycswdel(layer_id, layer_workspace):
     except:
         msg = json.dumps({'MSG':'Gagal unpublish servis CSW!'})
     return msg
+	
+def detect_base64_image(base64data):
+    # decoded = base64.b64decode(base64data)
+    header = base64data.split(',')[0]
+    tipe = ''
+    if header == 'data:image/jpeg;base64':
+        tipe = 'JPEG'
+    if header == 'data:image/png;base64':
+        tipe = 'PNG'
+    return tipe
+    
+def resize_image(image_raw, max_width, max_height, tipe):
+    image = ''
+    header = ''
+    print(image)
+    if tipe == 'JPEG':
+        image = image_raw.replace('data:image/jpeg;base64,','')
+        header = 'data:image/jpeg;base64,'
+    if tipe == 'PNG':
+        image = image_raw.replace('data:image/png;base64,','')
+        header = 'data:image/png;base64,'
+    img = Image.open(BytesIO(base64.b64decode(image)))
+    img.thumbnail([max_width, max_height], Image.ANTIALIAS)
+    buffered =  BytesIO()
+    img.save(buffered, tipe)
+    return header + base64.b64encode(buffered.getvalue())
 
+def gen_local_gsthumb(native_layername):
+    req_url = app.config['GEOSERVER_WMS_URL'].replace('?','/') +'reflect?format=image/png&layers=' + native_layername
+    r =  requests.get(req_url)
+    image = Image.open(BytesIO(r.content))
+    image.thumbnail([250, 250], Image.ANTIALIAS)
+    image.save(app.config['GEOSERVER_THUMBNAILS'] + native_layername.replace(':','-') + '.png', 'PNG')
+
+def export_n_zip(native_layername):
+    try:
+        pg_conn = "PG:host=" + app.config['DATASTORE_HOST'] + " port=" + app.config['DATASTORE_PORT'] + " user=" + \
+            app.config['DATASTORE_USER'] + " dbname=" + native_layername.split(':')[0] + \
+            " password=" + app.config['DATASTORE_PASS']
+        ogr2ogr.main(["", "-f", "ESRI Shapefile",
+                    app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.shp', pg_conn, native_layername.split(':')[1]])
+        with zipfile.ZipFile(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.zip', 'w') as MyZip:
+            MyZip.write(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.shp', native_layername.split(':')[1] + '.shp')
+            MyZip.write(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.shx', native_layername.split(':')[1] + '.shx')
+            MyZip.write(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.dbf', native_layername.split(':')[1] + '.dbf')
+            MyZip.write(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.prj', native_layername.split(':')[1] + '.prj')
+    except:
+        copyfile(app.config['RASTER_STORE'] + native_layername.split(":")[1] + '.tif', app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.tif')
+        with zipfile.ZipFile(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.zip', 'w') as MyZip:
+            MyZip.write(app.config['F_DOWNLOADS'] +  native_layername.split(':')[1] + '.tif', native_layername.split(':')[1] + '.tif')
+    
 # Database
 class User(db.Model):
     __tablename__ = 'users'
@@ -835,6 +892,7 @@ class Metalinks(db.Model):
     published = db.Column(db.String(1))
     xml = db.Column(db.Text)
     keyword = db.Column(db.Text)
+    downloadable = db.Column(db.String(1))
 
 class MetalinksSchema(ma.ModelSchema):
     class Meta:
@@ -852,6 +910,7 @@ class Metakugi(db.Model):
     xml = db.Column(db.Text)
     tipe = db.Column(db.String(16))
     keyword = db.Column(db.Text)
+    downloadable = db.Column(db.String(1))
 
 class MetakugiSchema(ma.ModelSchema):
     class Meta:
@@ -1207,7 +1266,9 @@ def sisteminfoedit():
         kodesimpul = urllib2.unquote(header['pubdata']['kodesimpul'])
         tentangkami = urllib2.unquote(header['pubdata']['tentangkami']) 
         try:
-            logo = header['pubdata']['logo']
+            logo_raw = header['pubdata']['logo']
+            logo_tipe = detect_base64_image(logo_raw)
+            logo = resize_image(logo_raw, 200, 200, logo_tipe)
         except:
             logo = ''
         print tentangkami
@@ -1484,7 +1545,11 @@ def new_groups():
     country = "Indonesia"
     kodesimpul = urllib2.unquote(header['pubdata']['kodesimpul'])
     try:
-        item_logo = header['pubdata']['logo'].split('base64,')[1]
+        # item_logo = header['pubdata']['logo'].split('base64,')[1]
+        item_raw = header['pubdata']['logo']
+        item_tipe = detect_base64_image(item_raw)
+        # print(logo_raw)
+        item_logo = resize_image(item_raw, 200, 200, item_tipe)
     except:
         item_logo = ''
     print 'Grup Baru:', name
@@ -1555,9 +1620,14 @@ def groupedit():
     country = "Indonesia"
     kodesimpul = header['pubdata']['kodesimpul']
     try:
-        item_logo = header['pubdata']['logo'].split('base64,')[1]
+        # item_logo = header['pubdata']['logo'].split('base64,')[1]
+        item_raw = header['pubdata']['logo']
+        item_tipe = detect_base64_image(item_raw)
+        # print(logo_raw)
+        item_logo = resize_image(item_raw, 200, 200, item_tipe)
     except:
-        item_logo = ''
+        # item_logo = ''
+        pass
     selected_group = Group.query.filter_by(name=name).first()
     selected_group.organization = organization
     selected_group.url = url
@@ -1840,7 +1910,7 @@ def get_wmslayers():
       except:
         gslayer['layer_abstract'] = ''
       try:
-        gslayer['layer_advertised'] = str_to_bool(content['featureType']['advertised'].capitalize())
+        gslayer['layer_advertised'] = str_to_bool(content['coverage']['advertised'].capitalize())
       except:
         gslayer['layer_advertised'] = False
       gslayer['layer_srs'] = content['coverage']['srs']
@@ -1980,6 +2050,7 @@ def modify_layer():
                 msg ='Set raster style'
             catalog.save(layer)
             catalog.reload()
+            gen_local_gsthumb(header['pubdata']['nativename'])
             resp = json.dumps({'RTN': True, 'MSG': 'Informasi layer berhasil diedit'})
         except:
             resp = json.dumps({'RTN': False, 'MSG': 'Informasi layer gagal diedit'})
@@ -2313,6 +2384,7 @@ def layer_adv():
             print 'baris 2306 = ', layer_id
             layer_workspace = header['pubdata']['nativename'].split(':')[0]
             layer_tipe = header['pubdata']['tipe']
+            downloadable = header['pubdata']['downloadable']
             catalog.save(resource)
             catalog.reload()
             if header['pubdata']['tipe'] == 'VECTOR':
@@ -2349,6 +2421,19 @@ def layer_adv():
                 pycsw_publish = pycswadv(layer_id,layer_workspace,layer_tipe)
                 print "baris 2342 Ok"
                 print(pycsw_publish)
+                if layer_workspace == 'KUGI':
+                    metakugi = Metakugi.query.filter_by(
+                        identifier=header['pubdata']['id']).first()
+                    metakugi.published = 'Y'
+                    metakugi.downloadable = downloadable
+                    db.session.commit()
+                else:
+                    metalinks = Metalinks.query.filter_by(
+                        identifier=header['pubdata']['id']).first()
+                    metalinks.published = 'Y'
+                    metalinks.downloadable = downloadable
+                    db.session.commit()
+                gen_local_gsthumb(header['pubdata']['nativename'])
                 resp = json.dumps({'RTN': True, 'MSG': 'Layer sukses diaktifkan'})
             else:
                 # try:
@@ -2461,6 +2546,7 @@ def pycsw_insert():
         identifier = header['pubdata']['identifier']
         workspace = header['pubdata']['workspace']
         akses = header['pubdata']['akses']
+        downloadable = header['pubdata']['downloadable']
         if workspace == 'KUGI':
             fitur = header['pubdata']['fitur']
         if workspace == 'KUGI':
@@ -2539,10 +2625,12 @@ def pycsw_insert():
         if workspace == 'KUGI':
             metakugi = Metakugi.query.filter_by(identifier=header['pubdata']['identifier']).first()
             metakugi.published = 'Y'
+            metakugi.downloadable = downloadable
             db.session.commit()
         else:
             metalinks = Metalinks.query.filter_by(identifier=header['pubdata']['identifier']).first()
             metalinks.published = 'Y'
+            metalinks.downloadable = downloadable
             db.session.commit()
         msg = json.dumps({'MSG':'Publish servis CSW sukses!'})
         # except:
@@ -2710,6 +2798,7 @@ def minmetadata():
         metalinks.metatick = 'Y'
         metalinks.akses = akses
         metalinks.keyword = keyword
+        metalinks.downloadable = 'N'
         db.session.commit()
         msg = json.dumps({'MSG':'Metadata minimal disimpan!'})
         return Response(msg, mimetype='application/json')
@@ -3697,7 +3786,7 @@ def metakugi_prod_view_json():
 @app.route('/api/meta/list')
 # @auth.login_required
 def meta_list():
-    metalist = Metalinks.query.with_entities(Metalinks.workspace, Metalinks.identifier, Metalinks.metatick, Metalinks.published, Metalinks.akses)
+    metalist = Metalinks.query.with_entities(Metalinks.workspace, Metalinks.identifier, Metalinks.metatick, Metalinks.published, Metalinks.akses, Metalinks.downloadable)
     metalinks = MetalinksSchema(many=True)
     output = metalinks.dump(metalist)
     return json.dumps(output.data)
@@ -3705,7 +3794,8 @@ def meta_list():
 @app.route('/api/metakugi/list')
 # @auth.login_required
 def kugi_list():
-    metalist = Metakugi.query.with_entities(Metakugi.skema, Metakugi.fitur, Metakugi.workspace, Metakugi.identifier, Metakugi.metatick, Metakugi.published, Metakugi.akses, Metakugi.tipe)
+    metalist = Metakugi.query.with_entities(Metakugi.skema, Metakugi.fitur, Metakugi.workspace, Metakugi.identifier,
+                                            Metakugi.metatick, Metakugi.published, Metakugi.akses, Metakugi.tipe, Metalinks.downloadable)
     metalinks = MetakugiSchema(many=True)
     output = metalinks.dump(metalist)
     return json.dumps(output.data)
@@ -3750,6 +3840,7 @@ def add_link():
                         metalinks.xml = isixml
                         metalinks.metatick = 'Y'
                         metalinks.akses = request.args['akses']
+                        metalinks.downloadable = 'N'
                         # db.session.add(metalinks)
                         db.session.commit()
                         # catalog.create_style(filename.split('.')[0], xml.read())
@@ -3844,6 +3935,7 @@ def add_kugilink(dbase):
                             metakugi.workspace = 'KUGI'
                             metakugi.skema = str(request.args['skema'])
                             metakugi.fitur = str(request.args['fitur'])
+                            metakugi.downloadable = 'N'
                             db.session.add(metakugi)
                         else:
                             metakugi.xml = isixml
@@ -3852,6 +3944,7 @@ def add_kugilink(dbase):
                             metakugi.workspace = 'KUGI'
                             metakugi.skema = str(request.args['skema'])
                             metakugi.fitur = str(request.args['fitur'])
+                            metakugi.downloadable = 'N'
                     # db.session.add(metalinks)
                     db.session.commit()
                 # catalog.create_style(filename.split('.')[0], xml.read())
@@ -4329,28 +4422,35 @@ def listmetalayer():
         if keyword != '':
             if bbox != '':
                 print 'ARGS A'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE title ILIKE '%%%s%%' OR abstract ILIKE '%%%s%%' AND ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier" % (keyword, keyword, bbox)
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE metadata.title ILIKE '%%%s%%' OR metadata.abstract ILIKE '%%%s%%' AND ST_Within(metadata.wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses" % (
+                    keyword, keyword, bbox)
             else:
                 print 'ARGS B'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE title ILIKE '%%%s%%' OR abstract ILIKE '%%%s%%' GROUP BY identifier" % (keyword, keyword)               
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier), COALESCE(metalinks.workspace, metakugi.workspace) AS workspace LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE metadata.title ILIKE '%%%s%%' OR metadata.abstract ILIKE '%%%s%%' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace" % (
+                    keyword, keyword)
         if kategori != '':
             if bbox != '':
                 print 'ARGS C'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE keywords ILIKE '%%%s%%' AND ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier" % (kategori, bbox)
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE metadata.keywords ILIKE '%%%s%%' AND ST_Within(metadata.wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace" % (
+                    kategori, bbox)
             else:
                 print 'ARGS D'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE keywords ILIKE '%%%s%%' GROUP BY identifier" % (kategori)
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE metadata.keywords ILIKE '%%%s%%' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace" % (
+                    kategori)
         if walidata != '':
             if bbox != '':
                 print 'ARGS E'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE identifier ILIKE '%%%s%%' AND ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier" % (walidata, bbox)
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE metadata.identifier ILIKE '%%%s%%' AND ST_Within(metadata.wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace" % (
+                    walidata, bbox)
             else:
                 print 'ARGS F'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE identifier ILIKE '%%%s%%' GROUP BY identifier" % (walidata)
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE metadata.identifier ILIKE '%%%s%%' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace" % (
+                    walidata)
         else:
             if bbox != '':
                 print 'ARGS G'
-                sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE (title ILIKE '%%%s%%' OR abstract ILIKE '%%%s%%') AND keywords ILIKE '%%%s%%' AND identifier ILIKE '%%%s%%' AND ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier" % (keyword, keyword, kategori, walidata, bbox)
+                sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE (metadata.title ILIKE '%%%s%%' OR metadata.abstract ILIKE '%%%s%%') AND metadata.keywords ILIKE '%%%s%%' AND metadata.identifier ILIKE '%%%s%%' AND ST_Within(metadata.wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace" % (
+                    keyword, keyword, kategori, walidata, bbox)
     else:
         print 'LOSS'
         try:
@@ -4359,10 +4459,11 @@ def listmetalayer():
             bbox = ''
         if bbox != '':
             print 'ARGS H'
-            sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata WHERE ST_Intersects(wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' GROUP BY identifier ORDER BY insert_date DESC " % (bbox)
+            sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE ST_Within(metadata.wkb_geometry, ST_MakeEnvelope(%s, 4326))='t' AND COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace ORDER BY metadata.insert_date DESC " % (
+                bbox)
         else:
             print 'ARGS I'
-            sqlmeta = "SELECT identifier, insert_date, type, title, abstract, keywords, links, ST_Extent(wkb_geometry) as bbox FROM metadata GROUP BY identifier ORDER BY insert_date DESC "
+            sqlmeta = "SELECT metadata.identifier, metadata.insert_date, metadata.title, metadata.abstract, metadata.keywords, metadata.links, ST_Extent(metadata.wkb_geometry) as bbox, COALESCE(metalinks.downloadable, metakugi.downloadable) AS downloadable, COALESCE(metalinks.akses, metakugi.akses) AS akses, COALESCE(metalinks.workspace, metakugi.workspace) AS workspace FROM metadata LEFT JOIN metalinks ON metadata.identifier = concat(metalinks.workspace, ':', metalinks.identifier) LEFT JOIN  metakugi ON metadata.identifier = concat(metakugi.workspace, ':', metakugi.identifier) WHERE COALESCE(metalinks.akses, metakugi.akses)='PUBLIC' GROUP BY metadata.identifier, metalinks.downloadable, metakugi.downloadable, metalinks.akses, metakugi.akses, metalinks.workspace, metakugi.workspace ORDER BY metadata.insert_date DESC"
     print sqlmeta
     resultsql = engine.execute(sa_text(sqlmeta)).fetchall()
     resultkey = engine.execute(sa_text(sqlmeta)).keys()
@@ -4393,7 +4494,11 @@ def new_keyword():
     print header['pubdata']
     item_keyword = urllib2.unquote(header['pubdata']['keyword'])
     try:
-        item_logo = header['pubdata']['logo'].split('base64,')[1]
+        # item_logo = header['pubdata']['logo'].split('base64,')[1]
+        item_raw = header['pubdata']['logo']
+        item_tipe = detect_base64_image(item_raw)
+        # print(logo_raw)
+        item_logo = resize_image(item_raw, 200, 200, item_tipe)
     except:
         item_logo = ''
     keyword = Keywords(keyword=item_keyword)
@@ -4411,7 +4516,11 @@ def edit_keyword():
     # print header['pubdata']
     item_keyword = urllib2.unquote(header['pubdata']['keyword'])
     try:
-        item_logo = header['pubdata']['logo'].split('base64,')[1]
+        # item_logo = header['pubdata']['logo'].split('base64,')[1]
+        item_raw = header['pubdata']['logo']
+        item_tipe = detect_base64_image(item_raw)
+        # print(logo_raw)
+        item_logo = resize_image(item_raw, 200, 200, item_tipe)
     except:
         item_logo = ''
     item_id = header['pubdata']['id']
@@ -4421,9 +4530,9 @@ def edit_keyword():
         sqledit = "UPDATE keywords SET keyword='%s', logo='%s' WHERE id=%s" % (item_keyword, item_logo, item_id)
     print(sqledit)
     engine.execute(sa_text(sqledit).execution_options(autocommit=True))
-    keyword = Keywords(keyword=item_keyword)
-    db.session.add(keyword)
-    db.session.commit()
+    # keyword = Keywords(keyword=item_keyword)
+    # db.session.add(keyword)
+    # db.session.commit()
     resp = json.dumps({'RTN': True, 'MSG': 'Sunting keyword berhasil!'})
     return Response(resp, mimetype='application/json')
 
@@ -4697,7 +4806,15 @@ def new_linkweb():
     item_name = urllib2.unquote(header['pubdata']['nama'])
     item_url = urllib2.unquote(header['pubdata']['url'])    
     try:
-        item_photo = header['pubdata']['image'].split('base64,')[1]
+        # item_photo = header['pubdata']['image'].split('base64,')[1]    
+        try:
+            # item_logo = header['pubdata']['logo'].split('base64,')[1]
+            item_photo_raw = header['pubdata']['image']
+            item_photo_tipe = detect_base64_image(item_photo_raw)
+            # print(logo_raw)
+            item_photo = resize_image(item_photo_raw, 300, 300, item_photo_tipe)
+        except:
+            item_photo = ''
     except:
         item_photo = ''
     linkweb = Linkweb(nama=item_name, url=item_url, image=item_photo)
@@ -4716,7 +4833,15 @@ def edit_linkweb():
     item_url = urllib2.unquote(header['pubdata']['url'])
     item_id = header['pubdata']['id']
     try:
-        item_photo = header['pubdata']['image'].split('base64,')[1]
+        # item_photo = header['pubdata']['image'].split('base64,')[1]        
+        try:
+            # item_logo = header['pubdata']['logo'].split('base64,')[1]
+            item_photo_raw = header['pubdata']['image']
+            item_photo_tipe = detect_base64_image(item_photo_raw)
+            # print(logo_raw)
+            item_photo = resize_image(item_photo_raw, 300, 300, item_photo_tipe)
+        except:
+            item_photo = ''
     except:
         item_photo = ''
     if item_photo == '':
@@ -4798,25 +4923,49 @@ def setfrontend():
     # image_3 = header['pubdata'][0]['image_3']
     # image_4 = header['pubdata'][0]['image_4']
     try:
-        image_1 = header['pubdata']['image_1']
+        image_1 = header['pubdata']['image_1']    
+        try:
+            image_1_raw = header['pubdata']['image_1']
+            image_1_tipe = detect_base64_image(image_1_raw)
+            image_1 = resize_image(image_1_raw, 1024, 768, image_1_tipe)
+        except:
+            image_1 = ''
         print 'IMAGE1'
     except:
         image_1 = ''
         print '!IMAGE1'
     try:
         image_2 = header['pubdata']['image_2']
+        try:
+            image_2_raw = header['pubdata']['image_2']
+            image_2_tipe = detect_base64_image(image_2_raw)
+            image_2 = resize_image(image_2_raw, 1024, 768, image_2_tipe)
+        except:
+            image_2 = ''
         print 'IMAGE2'
     except:
         image_2 = ''
         print '!IMAGE2'
     try:
         image_3 = header['pubdata']['image_3']
+        try:
+            image_3_raw = header['pubdata']['image_3']
+            image_3_tipe = detect_base64_image(image_3_raw)
+            image_3 = resize_image(image_3_raw, 1024, 768, image_3_tipe)
+        except:
+            image_3 = ''
         print 'IMAGE3'
     except:
         image_3 = ''
         print '!IMAGE3'
     try:
         image_4 = header['pubdata']['image_4']
+        try:
+            image_4_raw = header['pubdata']['image_4']
+            image_4_tipe = detect_base64_image(image_4_raw)
+            image_4 = resize_image(image_4_raw, 1024, 768, image_4_tipe)
+        except:
+            image_4 = ''
         print 'IMAGE4'
     except:
         image_4 = ''
@@ -4848,13 +4997,30 @@ def setfrontend():
     msg = json.dumps({'Result': True, 'MSG':'Data sukses disimpan!'})
     return Response(msg, mimetype='application/json')
 
+@app.route('/api/berita')
+# @auth.login_requireds
+def berita():
+    idberita = urllib2.unquote(request.args.get('id'))
+    list_berita = Berita.query.order_by(desc(Berita.tanggal)).filter_by(id=idberita)
+    berita = BeritaSchema(many=True)
+    output = berita.dump(list_berita)
+    # clean = re.compile('<.*?>')
+    # output.data[0]['stripped'] = re.sub(clean, '', output.data[0]['isiberita'])
+    # output.data[0]['stripped'] = output.data[0]['stripped'].replace('&nbsp;', ' ')
+    output.data[0]['stripped'] = html2text.html2text(output.data[0]['isiberita'])[:275] + '...'
+    return json.dumps(output.data)
+
 @app.route('/api/berita/list')
 # @auth.login_requireds
 def list_berita():
     list_berita = Berita.query.order_by(desc(Berita.tanggal)).limit(3).all()
     berita = BeritaSchema(many=True)
     output = berita.dump(list_berita)
-    return json.dumps(output.data)
+    result = []
+    for berita in output.data:
+        berita['stripped'] = html2text.html2text(berita['isiberita'])[:275] + '...'
+        result.append(berita)
+    return json.dumps(result)
 
 @app.route('/api/berita/listall')
 # @auth.login_requireds
@@ -4862,7 +5028,11 @@ def listall_berita():
     list_berita = Berita.query.order_by(desc(Berita.tanggal)).all()
     berita = BeritaSchema(many=True)
     output = berita.dump(list_berita)
-    return json.dumps(output.data)
+    result = []
+    for berita in output.data:
+        berita['stripped'] = html2text.html2text(berita['isiberita'])[:275] + '...'
+        result.append(berita)
+    return json.dumps(result)
 
 @app.route('/api/berita/add', methods=['POST'])
 # @auth.login_required
@@ -4913,6 +5083,15 @@ def delete_berita():
     # db.session.commit()
     resp = json.dumps({'RTN': True, 'MSG': 'Hapus berita berhasil!'})
     return Response(resp, mimetype='application/json')
+
+@app.route('/api/download_shape', methods=['GET'])
+#@auth.login_required
+def download_shape():
+    if request.method == 'GET':
+        layer = urllib2.unquote(request.args.get('layer'))
+        export_n_zip(layer)
+        return send_file(app.config['F_DOWNLOADS'] + layer.split(':')[1] + '.zip', attachment_filename=layer.split(':')[1] + '.zip')
+    # return layer
 
 @app.route('/api/statistik/push', methods=['POST'])
 # @auth.login_required

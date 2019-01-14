@@ -41,3 +41,4 @@ ALLOWED_VECTOR = set(['shp', 'SHP'])
 ALLOWED_RASTER = set(['tiff', 'tif', 'TIF', 'TIFF'])
 CSW_URL = 'http://127.0.0.1/csw'
 PALAPA_FOLDER = '/var/www/html/palapa/'
+F_DOWNLOADS = '/var/www/html/assets/downloads/'

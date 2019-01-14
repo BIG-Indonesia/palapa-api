@@ -2426,10 +2426,10 @@ def parse_metadata_md(input_xml):
     try:
         keyword=dictxml["gmd:MD_Metadata"]["gmd:identificationInfo"]["gmd:MD_DataIdentification"]["gmd:descriptiveKeywords"]["gmd:MD_Keywords"]["gmd:keyword"]["gco:CharacterString"]
         if keyword.strip() == None:
-            keyword = "Vegetasi"
+            keyword = "Dataset Khusus"
         print "keyword = ", keyword
     except:
-        keyword = "Vegetasi"
+        keyword = "Dataset Khusus"
         print "keyword = ", keyword
 
     try:   
