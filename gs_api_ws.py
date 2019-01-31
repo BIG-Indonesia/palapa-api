@@ -12,7 +12,7 @@ import sys, os, shutil, platform
 # abspath = os.path.dirname(__file__)
 # sys.path.append(abspath)
 # os.chdir(abspath)
-import urllib2, json, base64, sqlalchemy, sqlalchemy_utils, zipfile, ogr, shapefile, psycopg2, uuid, jwt, time, datetime, re
+import urllib2, json, base64, sqlalchemy, sqlalchemy_utils, zipfile, ogr, shapefile, psycopg2, uuid, jwt, time, datetime, re, math
 import ogr2ogr, osr, re, gdal, xmltodict, fnmatch
 import flask
 from flask import Flask, abort, request, redirect, jsonify, g, url_for, send_from_directory, Response, stream_with_context, send_file
@@ -69,6 +69,8 @@ app.config['SQLALCHEMY_DATASTORE'] = cfg.SQLALCHEMY_DATASTORE
 app.config['GEOSERVER_REST_URL'] = cfg.GEOSERVER_REST_URL
 app.config['GEOSERVER_WMS_URL'] = cfg.GEOSERVER_WMS_URL
 app.config['GEOSERVER_WFS_URL'] = cfg.GEOSERVER_WFS_URL
+app.config['GEOSERVER_WMS_OUT'] = cfg.GEOSERVER_WMS_OUT
+app.config['GEOSERVER_WFS_OUT'] = cfg.GEOSERVER_WFS_OUT
 app.config['GEOSERVER_USER'] = cfg.GEOSERVER_USER
 app.config['GEOSERVER_PASS'] = cfg.GEOSERVER_PASS
 app.config['GEOSERVER_THUMBNAILS'] = cfg.GEOSERVER_THUMBNAILS
@@ -229,13 +231,13 @@ def wkt2epsg(wkt, epsg=app.config['APP_BASE'] + 'epsg.txt', forceProj4=False):
 
 def unzip(source_filename, dest_dir):
     with zipfile.ZipFile(app.config['UPLOAD_FOLDER'] + source_filename) as zf:
-        print app.config['UPLOAD_FOLDER'] + source_filename
+        print(app.config['UPLOAD_FOLDER'] + source_filename)
         for member in zf.infolist():
             # Path traversal defense copied from
             # http://hg.python.org/cpython/file/tip/Lib/http/server.py#l789
             words = member.filename.split('/')
             path = app.config['UPLOAD_FOLDER'] + dest_dir.split('.')[0]
-            print "Path : " + path
+            print("Path : " + path)
             if not os.path.exists(path):
                 os.makedirs(path)
             for word in words[:-1]:
@@ -247,7 +249,7 @@ def unzip(source_filename, dest_dir):
                 if word in (os.curdir, os.pardir, ''):
                     continue
                 path = os.path.join(path, word)
-            print "Path2 : " + path
+            print("Path2 : " + path)
             zf.extract(member, path)
 
 def populateORDB(source_shp, database):
@@ -263,9 +265,9 @@ def pgis2pgis(source_db, source_schema, source_table, dest_db, dest_schema, dest
     fitur_out = dest_schema + '.' + dest_table
     schemaout = "SCHEMA='" + dest_schema + "'"
     sql = "SELECT * from " + fitur_in + " WHERE metadata=" + "'" + identifier + "'"
-    print "In/Out:", fitur_in, fitur_out
-    print "Conn In/Out:", pg_conn_input, pg_conn_output
-    print "SQL:", sql
+    print("In/Out:", fitur_in, fitur_out)
+    print("Conn In/Out:", pg_conn_input, pg_conn_output)
+    print("SQL:", sql)
     try:
         # ogr2ogr.main(["-append", "-a_srs", "EPSG:4326", "-f", "PostgreSQL", "--config", "PG_USE_COPY YES", pg_conn_input, pg_conn_output, fitur_in, fitur_out])
         ogr2ogr.main(["", "-f", "PostgreSQL", "-append", "-nln", fitur_out, "-lco", schemaout, pg_conn_output, pg_conn_input, "-sql", sql])
@@ -276,16 +278,16 @@ def pgis2pgis(source_db, source_schema, source_table, dest_db, dest_schema, dest
 
 def populateDB(source_shp, database, kodesimpul):
     # Get Layer EPSG
-    print 'Source: ' + source_shp
+    print('Source: ' + source_shp)
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shape = app.config['UPLOAD_FOLDER'] + source_shp.split('.')[0] +'/'+ source_shp.split('.')[0]+'.shp'
     pg_conn = "PG:host=" + app.config['DATASTORE_HOST'] + " port=" + app.config['DATASTORE_PORT'] + " user=" + app.config['DATASTORE_USER'] + " dbname=" + database + " password=" + app.config['DATASTORE_PASS']
-    print 'Shape: ' + shape
+    print('Shape: ' + shape)
     # print 'PG: ' + pg_conn
     shape_file = driver.Open(shape)
     # uuided = uuid.uuid4()
     dt = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    print "DT", dt
+    print("DT", dt)
     uuided = kodesimpul + str(dt)
     shape_id = source_shp.split('.')[0]+'-'+ str(uuided)
     layer = shape_file.GetLayer()
@@ -293,7 +295,7 @@ def populateDB(source_shp, database, kodesimpul):
     tipe = 'VECTOR'
     try:
         EPSG = wkt2epsg(crs.ExportToWkt())
-        print EPSG
+        print(EPSG)
         ogr2ogr.main(["","-f", "PostgreSQL", pg_conn, shape,"-nln", shape_id,"-nlt","PROMOTE_TO_MULTI", "-a_srs",EPSG])
         msg = " Data masuk ke database secara normal!"
         return msg, EPSG, source_shp.split('.')[0], str(uuided), tipe
@@ -307,15 +309,15 @@ def populateDB(source_shp, database, kodesimpul):
 
 def populateKUGI(source_shp, database, schema, table, scale, fcode):
     # Get Layer EPSG
-    print 'Source: ' + source_shp
+    print('Source: ' + source_shp)
     driver = ogr.GetDriverByName('ESRI Shapefile')
     shape = app.config['UPLOAD_FOLDER'] + source_shp.split('.')[0] +'/'+ source_shp.split('.')[0]+'.shp'
     pg_conn = "PG:host=" + app.config['DATASTORE_HOST'] + " port=" + app.config['DATASTORE_PORT'] + " user=" + app.config['DATASTORE_USER'] + " dbname=" + database + " password=" + app.config['DATASTORE_PASS']
-    print 'Shape: ' + shape
+    print('Shape: ' + shape)
     # print 'PG: ' + pg_conn
     shape_file = driver.Open(shape)
     dt = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    print "DT", dt
+    print("DT", dt)
     uuided = str(dt)
     shape_id = source_shp.split('.')[0]+'-'+ str(uuided)
     layer = shape_file.GetLayer()
@@ -323,20 +325,20 @@ def populateKUGI(source_shp, database, schema, table, scale, fcode):
     tipe = 'VECTOR'
     fitur = schema + '.' + table
     # fitur = schema + '.' + table + '_' + scale
-    print fitur
+    print(fitur)
     sql = "SELECT * from '%s' WHERE FCODE='%s'" % (shape_id, fcode)
-    print sql
+    print(sql)
     
     if iswindows() == True:
         where = "FCODE=\'%s\'" % (fcode)
-        print 'windows'
+        print('windows')
     else:
         where = "FCODE=\"%s\"" % (fcode)
-        print 'linux'
+        print('linux')
     
     try:
         EPSG = wkt2epsg(crs.ExportToWkt())
-        print EPSG
+        print(EPSG)
         try:
             ogro = ogr2ogr.main(["", "-append","-f", "PostgreSQL", pg_conn, shape,"-nln", fitur,"-nlt","PROMOTE_TO_MULTI", "-a_srs", EPSG, "-where", where])
             if ogro:
@@ -361,11 +363,11 @@ def populateKUGI(source_shp, database, schema, table, scale, fcode):
         return msg, EPSG, source_shp.split('.')[0], str(uuided), tipe, ogro
 
 def save_table(db, skema, fitur, identifier):
-    print db, identifier, skema, fitur
+    print(db, identifier, skema, fitur)
     pg_conn = "PG:host=" + app.config['DATASTORE_HOST'] + " port=" + app.config['DATASTORE_PORT'] + " user=" + app.config['DATASTORE_USER'] + " dbname=" + db + " password=" + app.config['DATASTORE_PASS']
-    print pg_conn
+    print(pg_conn)
     sql = "SELECT * from %s.%s WHERE metadata='%s'" % (skema, fitur, identifier)
-    print sql
+    print(sql)
     try:
         ogro = ogr2ogr.main(["", "-f", "GML", app.config['DOWNLOADS_FOLDER'] + fitur + '_' + identifier + '.gml', pg_conn, "-sql", sql])
         msg = app.config['DOWNLOADS_FOLDER'] + fitur + '_' + identifier + '.gml'
@@ -374,21 +376,21 @@ def save_table(db, skema, fitur, identifier):
     return msg
 
 def populateRS(source_ras,kodesimpul):
-    print source_ras
+    print(source_ras)
     catalog = Catalog(app.config['GEOSERVER_REST_URL'], app.config['GEOSERVER_USER'], app.config['GEOSERVER_PASS'])
     name = source_ras.split('.')[0]
     dt = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    print "DT", dt
+    print("DT", dt)
     uuided = kodesimpul + str(dt)
     layer_id = name + '-' + str(uuided)
     layer_file = app.config['RASTER_FOLDER']+layer_id.replace('-','_')+'.tif'
-    print layer_file
+    print(layer_file)
     copyfile(app.config['UPLOAD_FOLDER']+source_ras+'/'+source_ras+'.tif', layer_file)
     datafile = gdal.Open(layer_file)
     EPSG = wkt2epsg(datafile.GetProjection())
     tipe = 'RASTER'
     msg = " Raster projection: " + EPSG
-    print 'Source: ' + source_ras
+    print('Source: ' + source_ras)
     return msg, EPSG, layer_id, str(uuided),tipe
 
 def get_iden_unik(filedbf):
@@ -610,10 +612,10 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
         keyword = metalinks.keyword
     mcf_template = parse_metadata_md(xml_payload)
     try:
-        print "Identifier:", layer_id
-        print "Workspace:", layer_workspace
-        print "Akses:", akses
-        print fi
+        print("Identifier:", layer_id)
+        print("Workspace:", layer_workspace)
+        print("Akses:", akses)
+        print(fi)
         if akses == 'PUBLIC':
             restriction = 'unclassified'
         if akses == 'GOVERNMENT':
@@ -624,26 +626,38 @@ def pycswadv(layer_id,layer_workspace,layer_tipe):
             restriction = 'confendential'
         if akses == 'IGSTRATEGIS':
             restriction = 'topsecret'
-        print restriction
+        print(restriction)
         wms = WebMapService(app.config['GEOSERVER_WMS_URL'], version='1.1.1')
-        print wms
+        print(wms)
         bbox = wms[fi].boundingBoxWGS84
         wb = str(bbox[0])
+        if math.isinf(float(bbox[0])):
+            wb = '95'
         sb = str(bbox[1])
+        if math.isinf(float(bbox[1])):
+            sb = '-11'
         eb = str(bbox[2])
+        if math.isinf(float(bbox[2])):
+            eb = '142'
         nb = str(bbox[3])
+        if math.isinf(float(bbox[3])):
+                nb = '6'
+        #wb = str(bbox[0])
+        #sb = str(bbox[1])
+        #eb = str(bbox[2])
+        #nb = str(bbox[3])
         bboxwgs84 = wb+','+sb+','+eb+','+nb
-        print bboxwgs84
-        wmslink = app.config['GEOSERVER_WMS_URL'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"
-        wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&outputFormat=shape-zip"
-        print wmslink
-        print wfslink
+        print(bboxwgs84)
+        wmslink = app.config['GEOSERVER_WMS_OUT'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"
+        wfslink = app.config['GEOSERVER_WFS_OUT'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&outputFormat=shape-zip"
+        print(wmslink)
+        print(wfslink)
         mcf_template = mcf_template.replace('$$rep:fileIdentifier$$', fi)
         mcf_template = mcf_template.replace('$$rep:security$$', restriction)
         mcf_template = mcf_template.replace('$$rep:secnote$$', akses)
-        mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_URL'])
+        mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_OUT'])
         mcf_template = mcf_template.replace('$$rep:geoserverfullwms$$', wmslink)
-        mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_URL'])
+        mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_OUT'])
         mcf_template = mcf_template.replace('$$rep:geoserverfullwfs$$', wfslink)
         mcf_template = mcf_template.replace('$$rep:bboxwgs84$$', bboxwgs84)
         mcf_template = mcf_template.replace('$$rep:topicCategory$$', 'location')
@@ -1872,9 +1886,17 @@ def get_wmslayers():
         gslayer['layer_advertised'] = False
       gslayer['layer_srs'] = content['featureType']['srs']
       gslayer['layer_minx'] = float(content['featureType']['latLonBoundingBox']['minx'])
+      if math.isinf(gslayer['layer_minx']):
+          gslayer['layer_minx'] = 94
       gslayer['layer_maxx'] = float(content['featureType']['latLonBoundingBox']['maxx'])
+      if math.isinf(gslayer['layer_maxx']):
+          gslayer['layer_maxx'] = 143
       gslayer['layer_miny'] = float(content['featureType']['latLonBoundingBox']['miny'])
+      if math.isinf(gslayer['layer_miny']):
+          gslayer['layer_miny'] = -11
       gslayer['layer_maxy'] = float(content['featureType']['latLonBoundingBox']['maxy'])
+      if math.isinf(gslayer['layer_maxy']):
+          gslayer['layer_maxy'] = 6
       gslayer['layer_aktif'] = str_to_bool(content['featureType']['enabled'].capitalize())
       gslayer['last_modified'] = moddate.strftime('%Y-%m-%d %H:%M:%S')
       for namespace in workspaces:
@@ -2582,16 +2604,23 @@ def pycsw_insert():
             wms = WebMapService(app.config['GEOSERVER_WMS_URL'], version='1.1.1')
             bbox = wms[fi].boundingBoxWGS84
             wb = str(bbox[0])
+            if math.isinf(float(bbox[0])):
+                wb = '95'
             sb = str(bbox[1])
+            if math.isinf(float(bbox[1])):
+                sb = '-11'
             eb = str(bbox[2])
+            if math.isinf(float(bbox[2])):
+                eb = '142'
             nb = str(bbox[3])
+            if math.isinf(float(bbox[3])):
+                nb = '6'
             bboxwgs84 = wb+','+sb+','+eb+','+nb
             print bboxwgs84
-            wmslink = app.config['GEOSERVER_WMS_URL'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"  + "&CQL_FILTER=metadata='" + identifier + "'"
-            wfslink = app.config['GEOSERVER_WFS_URL'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&CQL_FILTER=metadata='" + identifier + "'"
-            
-            # print wmslink
-            # print wfslink
+            wmslink = app.config['GEOSERVER_WMS_OUT'] + "service=WMS&version=1.1.0&request=GetMap&layers=" + fi + "&styles=&bbox=" + bboxwgs84 + "&width=768&height=768&srs=EPSG:4326&format=application/openlayers"  + "&CQL_FILTER=metadata='" + identifier + "'"
+            wfslink = app.config['GEOSERVER_WFS_OUT'] + "service=WFS&version=1.0.0&request=GetFeature&typeName=" + fi + "&CQL_FILTER=metadata='" + identifier + "'"
+            print wmslink
+            print wfslink
             mcf_template = mcf_template.replace('$$rep:fileIdentifier$$', fi)
             # mcf_template = mcf_template.replace('$$rep:individualName$$', individualName)
             # mcf_template = mcf_template.replace('$$rep:organisationName$$', organisationName)
@@ -2600,9 +2629,9 @@ def pycsw_insert():
             # mcf_template = mcf_template.replace('$$rep:abstract$$', abstract)
             mcf_template = mcf_template.replace('$$rep:security$$', restriction)
             mcf_template = mcf_template.replace('$$rep:secnote$$', akses)
-            mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_URL'])
+            mcf_template = mcf_template.replace('$$rep:geoserverwms$$', app.config['GEOSERVER_WMS_OUT'])
             #mcf_template = mcf_template.replace('$$rep:geoserverwms$$', wmslink)
-            mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_URL'])
+            mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', app.config['GEOSERVER_WFS_OUT'])
             mcf_template = mcf_template.replace('$$rep:geoserverfullwms$$', wmslink)
             mcf_template = mcf_template.replace('$$rep:geoserverfullwfs$$', wfslink)
             #mcf_template = mcf_template.replace('$$rep:geoserverwfs$$', wfslink)
