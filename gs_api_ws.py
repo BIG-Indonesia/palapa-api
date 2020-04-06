@@ -1713,7 +1713,7 @@ def groupedit():
         # print(logo_raw)
         item_logo = resize_image(item_raw, 200, 200, item_tipe)
     except:
-        # item_logo = ''
+        item_logo = ''
         pass
     selected_group = Group.query.filter_by(name=name).first()
     selected_group.organization = organization
