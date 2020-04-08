@@ -1686,7 +1686,7 @@ def new_groups():
     catalog.save(new_store)
     catalog.reload()
         # return jsonify({'RTN': 'Workspace ' + workspace + ' dibuat.'})
-    resp = json.dumps({'RTN': filename, 'MSG': 'Grup ' + name + ' selesai dibuat!'})
+    resp = json.dumps({'RTN': 'OK', 'MSG': 'Grup ' + name + ' selesai dibuat!'})
     return Response(resp, mimetype='application/json')
 
 @app.route('/api/group/edit', methods=['POST'])
